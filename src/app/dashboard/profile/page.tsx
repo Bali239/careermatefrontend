@@ -11,11 +11,13 @@ const { TextArea } = Input
 type EntryValue = string | boolean | string[]
 type Entry = Record<string, EntryValue>
 type ListKey = 'experience' | 'education' | 'certifications' | 'projects' | 'languages' | 'awards'
-type Profile = { contact: Record<string, string>; headline: string; summary: string; skills: string[]; interests: string[] } & Record<ListKey, Entry[]>
+type CustomField = { label: string; value: string }
+type CustomSection = { title: string; fields: CustomField[] }
+type Profile = { contact: Record<string, string>; headline: string; summary: string; skills: string[]; interests: string[]; customSections: CustomSection[] } & Record<ListKey, Entry[]>
 type Extraction = { id: string; name: string; status: 'pending' | 'processing' | 'completed' | 'failed'; error: string; createdAt: string }
 type APIProfile = { profile: Profile; extraction: Extraction[] }
 
-const blank: Profile = { contact: { fullName: '', email: '', phone: '', location: '', website: '', linkedin: '', github: '' }, headline: '', summary: '', skills: [], interests: [], experience: [], education: [], certifications: [], projects: [], languages: [], awards: [] }
+const blank: Profile = { contact: { fullName: '', email: '', phone: '', location: '', website: '', linkedin: '', github: '' }, headline: '', summary: '', skills: [], interests: [], experience: [], education: [], certifications: [], projects: [], languages: [], awards: [], customSections: [] }
 const templates: Record<ListKey, Entry> = {
   experience: { jobTitle: '', company: '', location: '', startDate: '', endDate: '', current: false, description: '', achievements: [] },
   education: { institution: '', degree: '', field: '', location: '', startDate: '', endDate: '', details: '' },
@@ -66,6 +68,12 @@ export default function ProfilePage() {
   function updateList(key: ListKey, index: number, field: string, value: EntryValue) { setProfile((prev) => ({ ...prev, [key]: prev[key].map((item, i) => i === index ? { ...item, [field]: value } : item) })) }
   function addEntry(key: ListKey) { setProfile((prev) => ({ ...prev, [key]: [...prev[key], { ...templates[key] }] })) }
   function removeEntry(key: ListKey, index: number) { setProfile((prev) => ({ ...prev, [key]: prev[key].filter((_, i) => i !== index) })) }
+  function patchCustomSection(index: number, patch: Partial<CustomSection>) { setProfile((prev) => ({ ...prev, customSections: prev.customSections.map((section, i) => i === index ? { ...section, ...patch } : section) })) }
+  function addCustomSection() { setProfile((prev) => ({ ...prev, customSections: [...prev.customSections, { title: 'Additional information', fields: [] }] })) }
+  function addCustomField(sectionIndex: number) { setProfile((prev) => ({ ...prev, customSections: prev.customSections.map((section, i) => i === sectionIndex ? { ...section, fields: [...section.fields, { label: '', value: '' }] } : section) })) }
+  function patchCustomField(sectionIndex: number, fieldIndex: number, patch: Partial<CustomField>) { setProfile((prev) => ({ ...prev, customSections: prev.customSections.map((section, i) => i === sectionIndex ? { ...section, fields: section.fields.map((field, j) => j === fieldIndex ? { ...field, ...patch } : field) } : section) })) }
+  function removeCustomField(sectionIndex: number, fieldIndex: number) { setProfile((prev) => ({ ...prev, customSections: prev.customSections.map((section, i) => i === sectionIndex ? { ...section, fields: section.fields.filter((_, j) => j !== fieldIndex) } : section) })) }
+  function removeCustomSection(sectionIndex: number) { setProfile((prev) => ({ ...prev, customSections: prev.customSections.filter((_, i) => i !== sectionIndex) })) }
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setSaving(true); setError('')
@@ -117,6 +125,14 @@ export default function ProfilePage() {
         {profile[key].length === 0 && <p className="text-sm text-slate-500">No {title.toLowerCase()} added yet.</p>}
         <div className="space-y-5">{profile[key].map((entry, index) => <div key={`${key}-${index}`} className="rounded-xl border border-slate-200 p-4"><div className="mb-4 flex items-center justify-between"><h3 className="font-semibold">{title.slice(0, -1)} {index + 1}</h3><Button danger type="text" icon={<DeleteOutlined />} aria-label={`Remove ${title} ${index + 1}`} onClick={() => removeEntry(key, index)}>Remove</Button></div><div className="grid gap-4 sm:grid-cols-2">{fields.map((field) => <label key={field.key} className={`grid gap-1.5 text-sm font-medium text-slate-700 ${field.multiline || field.key === 'current' ? 'sm:col-span-2' : ''}`}>{field.key === 'current' ? <Checkbox checked={Boolean(entry.current)} onChange={(event) => updateList(key, index, 'current', event.target.checked)}>{field.label}</Checkbox> : <>{field.label}{field.multiline ? <TextArea className={inputClass} rows={field.key === 'description' || field.key === 'details' ? 3 : 2} value={Array.isArray(entry[field.key]) ? (entry[field.key] as string[]).join('\n') : String(entry[field.key] ?? '')} onChange={(event) => updateList(key, index, field.key, field.list ? event.target.value.split('\n').map((x) => x.trim()).filter(Boolean) : event.target.value)} /> : <Input className={inputClass} value={String(entry[field.key] ?? '')} onChange={(event) => updateList(key, index, field.key, event.target.value)} />}</>}</label>)}</div></div>)}</div>
       </Card>)}
+      <Card title="Additional sections" className="rounded-2xl shadow-sm" extra={<Button icon={<PlusOutlined />} onClick={addCustomSection}>Add section</Button>}>
+        {profile.customSections.length === 0 && <p className="text-sm text-slate-500">Details that do not fit the standard sections will appear here after CV extraction.</p>}
+        <div className="space-y-5">{profile.customSections.map((section, sectionIndex) => <div key={sectionIndex} className="rounded-xl border border-slate-200 p-4">
+          <div className="mb-4 flex flex-wrap items-center gap-2"><Input className={inputClass} aria-label="Section title" value={section.title} onChange={(event) => patchCustomSection(sectionIndex, { title: event.target.value })} /><Button danger type="text" icon={<DeleteOutlined />} onClick={() => removeCustomSection(sectionIndex)}>Remove section</Button></div>
+          <div className="space-y-3">{section.fields.map((field, fieldIndex) => <div key={fieldIndex} className="grid gap-3 sm:grid-cols-[1fr_2fr_auto]"><Input className={inputClass} aria-label="Field label" placeholder="Label" value={field.label} onChange={(event) => patchCustomField(sectionIndex, fieldIndex, { label: event.target.value })} /><Input.TextArea className={inputClass} aria-label="Field value" placeholder="Value" autoSize={{ minRows: 1, maxRows: 5 }} value={field.value} onChange={(event) => patchCustomField(sectionIndex, fieldIndex, { value: event.target.value })} /><Button danger type="text" icon={<DeleteOutlined />} aria-label="Remove field" onClick={() => removeCustomField(sectionIndex, fieldIndex)} /></div>)}</div>
+          <Button className="mt-3" icon={<PlusOutlined />} onClick={() => addCustomField(sectionIndex)}>Add field</Button>
+        </div>)}</div>
+      </Card>
       <div className="flex justify-end rounded-xl border border-slate-200 bg-white p-3 shadow-sm"><Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={saving}>Save profile</Button></div>
     </form>
     <div className="rounded-2xl border border-indigo-100 bg-indigo-50 p-4"><div className="flex items-start gap-3"><FileAddOutlined className="mt-1 text-indigo-600"/><div><p className="font-semibold text-indigo-950">CV extraction works automatically</p><p className="mt-1 text-sm leading-6 text-indigo-800">When you upload a PDF or Word CV in your CV library, the AI reads it and fills missing profile details. You can review and edit everything here. <a className="font-semibold underline" href="/dashboard/cv">Go to your CV library</a></p></div></div></div>
