@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { exchangeGoogleHandoff } from "@/lib/axios";
 import { useAuth } from "@/components/auth/AuthProvider";
 import AuthMessage from "@/components/auth/AuthMessage";
+import { authSubmitClass } from "@/components/auth/classes";
 
 export default function GoogleCallback() {
   const router = useRouter(); const { acceptSession } = useAuth(); const attempted = useRef(false); const [error, setError] = useState("");
@@ -25,5 +26,5 @@ export default function GoogleCallback() {
     }
     void finishSignIn();
   }, [acceptSession, router]);
-  return error ? <div className="auth-result"><AuthMessage>{error}</AuthMessage><a className="auth-submit auth-submit-link" href="/auth/login">Back to sign in</a></div> : <p className="auth-copy">Completing Google sign-in…</p>;
+  return error ? <div className="grid gap-3"><AuthMessage>{error}</AuthMessage><a className={`${authSubmitClass} mt-5`} href="/auth/login">Back to sign in</a></div> : <p className="mb-5 text-xs leading-[1.7] text-[#727994]">Completing Google sign-in…</p>;
 }

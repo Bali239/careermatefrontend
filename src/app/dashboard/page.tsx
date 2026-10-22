@@ -13,7 +13,7 @@ export default function DashboardPage() {
   }, [ready, user, router]);
 
   if (!ready || !user) {
-    return <main className="auth-shell" aria-live="polite">Checking your session…</main>;
+    return <main className="flex min-h-[50vh] items-center justify-center text-sm text-slate-500" aria-live="polite">Checking your session…</main>;
   }
 
   return (

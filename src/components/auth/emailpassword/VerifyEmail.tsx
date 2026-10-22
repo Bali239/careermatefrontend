@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/axios";
 import AuthMessage from "@/components/auth/AuthMessage";
+import { authSubmitClass } from "@/components/auth/classes";
 
 export default function VerifyEmail({ token }: { token?: string }) {
   const requested = useRef(false); const [status, setStatus] = useState(token ? "Checking your verification link…" : "This verification link is missing or invalid."); const [isError, setIsError] = useState(!token);
@@ -14,5 +15,5 @@ export default function VerifyEmail({ token }: { token?: string }) {
     api.post("/auth/verify-email", { token }).then((response) => setStatus(response.data.message ?? "Email verified. You can now sign in."))
       .catch((error) => { setIsError(true); setStatus(error.response?.data?.message ?? "This verification link is invalid or expired."); });
   }, [token]);
-  return <div className="auth-result"><AuthMessage kind={isError ? "error" : "success"}>{status}</AuthMessage>{!isError && status.startsWith("Checking") ? null : <Link className="auth-submit auth-submit-link" href="/auth/login">Continue to sign in</Link>}</div>;
+  return <div className="grid gap-3"><AuthMessage kind={isError ? "error" : "success"}>{status}</AuthMessage>{!isError && status.startsWith("Checking") ? null : <Link className={`${authSubmitClass} mt-5`} href="/auth/login">Continue to sign in</Link>}</div>;
 }
