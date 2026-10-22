@@ -91,6 +91,11 @@ a { color: inherit; text-decoration: none; }
 .auth-nav-user { color: var(--ink); }
 .auth-nav-button, .auth-link-button { border: 0; background: none; color: var(--purple); cursor: pointer; font: inherit; }
 .auth-nav-placeholder { width: 145px; height: 36px; }
+.account-menu-trigger { height: 42px; padding: 3px 8px; border-radius: 999px; }
+.account-menu-trigger:hover { background: #f3f1ff !important; }
+.account-menu-chevron { color: #777b90; font-size: 10px; }
+.account-menu-profile { display: grid; gap: 3px; max-width: 230px; padding: 5px 0; }
+.account-menu-profile .ant-typography { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hero-actions { flex-wrap: wrap; }
 .hero-secondary-link { color: var(--purple); font-size: 12px; font-weight: 700; }
 .auth-shell { min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 42px 20px; background: radial-gradient(ellipse at 50% 0%, #f1eeff 0, #fbfaff 42%, #fff 78%); }
