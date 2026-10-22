@@ -6,6 +6,7 @@ import { Provider as ReduxProvider } from "react-redux";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { store } from "@/store";
 import { createQueryClient } from "@/lib/query-client";
+import { AuthProvider } from "@/components/auth/AuthProvider";
 
 export default function Providers({ children }: PropsWithChildren) {
   const [queryClient] = useState(
@@ -24,7 +25,7 @@ export default function Providers({ children }: PropsWithChildren) {
             },
           }}
         >
-          {children}
+          <AuthProvider>{children}</AuthProvider>
         </ConfigProvider>
       </ReduxProvider>
     </QueryClientProvider>

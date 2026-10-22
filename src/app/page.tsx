@@ -1,5 +1,6 @@
 import HealthStatus from "@/components/layout/HealthStatus";
 import LandingIcon from "@/components/ui/LandingIcon";
+import AuthLinks from "@/components/auth/AuthLinks";
 
 const features = [
   {
@@ -31,7 +32,7 @@ export default function Home() {
           <a href="#features">How it works</a>
           <a href="#about">About</a>
         </nav>
-        <div className="topbar-status"><HealthStatus /></div>
+        <div className="topbar-auth"><AuthLinks /></div>
       </header>
 
       <section className="hero" id="home">
@@ -43,7 +44,8 @@ export default function Home() {
             and finding a direction that fits you.
           </p>
           <div className="hero-actions">
-            <a className="primary-link" href="#features">Explore what you can do <LandingIcon name="arrow" /></a>
+            <a className="primary-link" href="/auth/signup">Get started <LandingIcon name="arrow" /></a>
+            <a className="hero-secondary-link" href="#features">Explore what you can do</a>
             <span className="hero-note">A clearer path, one step at a time.</span>
           </div>
           <div className="hero-proof">
