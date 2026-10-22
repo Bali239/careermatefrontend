@@ -31,7 +31,7 @@ export default function HealthStatus() {
         <Alert
           type="error"
           showIcon
-          message="The API could not be reached. Check the server and API URL."
+          title="The API could not be reached. Check the server and API URL."
           action={
             <Button size="small" onClick={() => void healthQuery.refetch()} loading={healthQuery.isFetching}>
               Retry
