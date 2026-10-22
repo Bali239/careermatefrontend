@@ -1,69 +1,97 @@
-import Image from "next/image";
+import HealthStatus from "@/components/layout/HealthStatus";
+import LandingIcon from "@/components/ui/LandingIcon";
+
+const features = [
+  {
+    icon: <LandingIcon name="fileSearch" />,
+    title: "Understand your CV",
+    description: "Turn your experience into a clear picture of your strengths and opportunities.",
+  },
+  {
+    icon: <LandingIcon name="bulb" />,
+    title: "Find your next step",
+    description: "Get practical guidance to help you focus your career search.",
+  },
+  {
+    icon: <LandingIcon name="safety" />,
+    title: "Stay in control",
+    description: "Your career journey is personal. Your information should be handled with care.",
+  },
+];
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <main className="site-shell">
+      <header className="topbar">
+        <a className="brand" href="#home" aria-label="AI Career Assistant home">
+          <span className="brand-mark"><LandingIcon name="star" /></span>
+          <span>career<span className="brand-light">mate</span></span>
+        </a>
+        <nav className="topbar-nav" aria-label="Main navigation">
+          <a href="#features">How it works</a>
+          <a href="#about">About</a>
+        </nav>
+        <div className="topbar-status"><HealthStatus /></div>
+      </header>
+
+      <section className="hero" id="home">
+        <div className="hero-copy">
+          <div className="eyebrow"><span className="eyebrow-dot" /> YOUR NEXT CHAPTER STARTS HERE</div>
+          <h1>Make your next career move <span>with confidence.</span></h1>
+          <p className="hero-description">
+            A thoughtful assistant for understanding your experience, exploring opportunities,
+            and finding a direction that fits you.
           </p>
+          <div className="hero-actions">
+            <a className="primary-link" href="#features">Explore what you can do <LandingIcon name="arrow" /></a>
+            <span className="hero-note">A clearer path, one step at a time.</span>
+          </div>
+          <div className="hero-proof">
+            <div className="proof-avatars" aria-hidden="true"><span>A</span><span>M</span><span>S</span></div>
+            <p>Built to help you move forward<br /><strong>at your own pace</strong></p>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <div className="hero-visual" aria-label="Career progress illustration">
+          <div className="visual-orbit orbit-one" />
+          <div className="visual-orbit orbit-two" />
+          <div className="visual-card main-card">
+            <div className="visual-card-top"><span className="mini-icon"><LandingIcon name="star" /></span><span>YOUR CAREER SNAPSHOT</span><span className="live-dot" /></div>
+            <div className="snapshot-title">A little more clarity.<br /><strong>A lot more possibility.</strong></div>
+            <div className="snapshot-rule"><span /></div>
+            <div className="snapshot-meta"><span>Experience</span><span>Growing</span></div>
+            <div className="snapshot-bars"><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /></div>
+            <div className="snapshot-bottom"><span>Explore your strengths</span><LandingIcon name="arrow" /></div>
+          </div>
+          <div className="float-card float-card-top"><span className="float-icon"><LandingIcon name="bulb" /></span><span><strong>Find your focus</strong><small>One step at a time</small></span></div>
+          <div className="float-card float-card-bottom"><span className="float-check">✓</span><span><strong>Made for your journey</strong><small>Guidance that moves with you</small></span></div>
+          <span className="visual-sparkle sparkle-one">✦</span><span className="visual-sparkle sparkle-two">✧</span>
         </div>
-      </main>
-    </div>
+      </section>
+
+      <section className="features" id="features">
+        <div className="section-heading">
+          <span className="section-kicker">A LITTLE HELP GOES A LONG WAY</span>
+          <h2>Your career, with a clearer view.</h2>
+          <p>Start with what you know. We’ll help you see where it could take you.</p>
+        </div>
+        <div className="feature-grid">
+          {features.map((feature, index) => (
+            <article className="feature-card" key={feature.title}>
+              <span className={`feature-icon feature-icon-${index + 1}`}>{feature.icon}</span>
+              <h3>{feature.title}</h3>
+              <p>{feature.description}</p>
+              <a href="#about" aria-label={`Learn more: ${feature.title}`}><LandingIcon name="arrow" /></a>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <footer className="site-footer" id="about">
+        <a className="brand footer-brand" href="#home"><span className="brand-mark"><LandingIcon name="star" /></span><span>career<span className="brand-light">mate</span></span></a>
+        <span>Thoughtful tools for wherever you’re headed.</span>
+        <span className="footer-status"><HealthStatus /></span>
+      </footer>
+    </main>
   );
 }

@@ -1,36 +1,42 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI Career Assistant Client
 
-## Getting Started
+The client is a standalone Next.js App Router application using TypeScript, Ant Design, Tailwind CSS, TanStack Query, Redux Toolkit, React Hook Form, and Zod.
 
-First, run the development server:
+## Prerequisites
+
+- Node.js 20 or newer
+- npm
+- The AI Career Assistant API running separately (see `../server/README.md`)
+
+## Setup
+
+```bash
+npm install
+cp .env.example .env.local
+```
+
+Set `NEXT_PUBLIC_API_URL` to the API base URL. The default is `http://localhost:5000/api/v1`.
+
+## Run
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). The landing page checks `GET /health` using the configured API base URL and displays the API connection state.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Build and lint
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run lint
+npm run build
+npm start
+```
 
-## Learn More
+## Troubleshooting
 
-To learn more about Next.js, take a look at the following resources:
+- **API shows Disconnected:** Start the server, check `NEXT_PUBLIC_API_URL`, and make sure the API allows the client origin configured by the server’s `CLIENT_URL`.
+- **Port is in use:** Start Next.js with `npm run dev -- --port 3001` and set the server `CLIENT_URL` to `http://localhost:3001`.
+- **Tailwind styles are missing:** Keep the PostCSS plugin in `postcss.config.mjs` and import `globals.css` from the root layout.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Only public configuration belongs in `NEXT_PUBLIC_*` variables. Google secrets, service-account paths, and other server credentials must remain in the backend environment.
