@@ -5,7 +5,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 're
 import { Document, Packer, Paragraph, TextRun } from 'docx'
 import { jsPDF } from 'jspdf'
 import html2canvas from 'html2canvas'
-import { Button, Card, Empty, Input, Modal, Tag, Typography } from 'antd'
+import { Button, Card, Empty, Input, Tag, Typography } from 'antd'
 import {
   FolderOpenOutlined,
   MessageOutlined,
@@ -17,9 +17,9 @@ import {
 import { toast } from 'sonner'
 import { api } from '@/lib/axios'
 import { useChatNavigation } from '../ChatNavigationContext'
-import type { ChatSession } from '../ChatNavigationContext'
-
-type CV = { id: string; name: string; fileName: string; contentType: string; size: number; extractionStatus?: 'pending' | 'processing' | 'completed' | 'failed'; extractionError?: string; createdAt: string }
+import type { CV, ChatSession } from '../models'
+import CvSelectionModal from './CvSelectionModal'
+import JobDescriptionComposer from './JobDescriptionComposer'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 const ACCEPTED = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
@@ -374,100 +374,34 @@ export default function ChatPage() {
                   )}
                 </div>
 
-                <div className="space-y-3">
-                  <Input.TextArea
-                    value={jobDescription}
-                    onChange={(event) => setJobDescription(event.target.value)}
-                    placeholder="Paste the job description here..."
-                    autoSize={{ minRows: 2, maxRows: 5 }}
-                    className="!rounded-[18px] border-[#e5e7ef] bg-white !px-4 !py-3"
-                  />
-
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      {selectedCvId ? (
-                        <Tag color="geekblue">Selected CV: {cvs.find((cv) => cv.id === selectedCvId)?.name ?? 'Current CV'}</Tag>
-                      ) : (
-                        <Tag color="default">No CV selected</Tag>
-                      )}
-                      {jobDescription.trim().length > 0 && <Tag color="purple">{jobDescription.trim().length} chars</Tag>}
-                    </div>
-
-                    <Button
-                      type="primary"
-                      size="large"
-                      icon={<SendOutlined />}
-                      loading={creatingChat}
-                      onClick={() => void createNewChat()}
-                      disabled={!selectedCvId || !jobDescription.trim() || creatingChat}
-                    >
-                      Send
-                    </Button>
-                  </div>
-                </div>
+                <JobDescriptionComposer
+                  jobDescription={jobDescription}
+                  onJobDescriptionChange={setJobDescription}
+                  selectedCvLabel={selectedCvId ? cvs.find((cv) => cv.id === selectedCvId)?.name ?? 'Current CV' : null}
+                  creatingChat={creatingChat}
+                  onSend={() => void createNewChat()}
+                />
               </div>
             </div>
           </div>
         </main>
       </div>
 
-      <Modal
-        title="Choose or upload your CV"
+      <CvSelectionModal
         open={cvModalOpen}
-        onCancel={closeCvModal}
-        footer={null}
-        width={900}
-      >
-        <div className="grid gap-4 md:grid-cols-[1.15fr_0.85fr]">
-          <div>
-            <div className="mb-3 text-sm font-semibold text-[#2c3147]">Saved CVs</div>
-            {cvs.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-[#e5e7ef] bg-[#f8f9ff] p-4 text-sm text-[#6a7289]">No CV files yet.</div>
-            ) : (
-              <div className="space-y-2">
-                {cvs.map((cv) => (
-                  <button
-                    key={cv.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedCvId(cv.id)
-                      closeCvModal()
-                    }}
-                    className={`flex w-full items-center justify-between rounded-2xl border px-3 py-3 text-left ${selectedCvId === cv.id ? 'border-[#cfc8ff] bg-[#f1efff]' : 'border-[#eef0f5] bg-white hover:border-[#dfe3ff]'}`}
-                  >
-                    <div className="min-w-0">
-                      <div className="truncate font-semibold text-[#1f2333]">{cv.name}</div>
-                      <div className="truncate text-xs text-[#6a7289]">{cv.fileName}</div>
-                    </div>
-                    <Tag color="processing">{cv.contentType.split('/').pop()}</Tag>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <form onSubmit={uploadInlineCv} className="rounded-[20px] border border-dashed border-[#dfe3ff] bg-[#f8f9ff] p-4">
-            <div className="mb-3 text-sm font-semibold text-[#2c3147]">Upload a new CV</div>
-            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <Input value={uploadName} onChange={(event) => setUploadName(event.target.value)} placeholder="CV name" />
-              <Button type="default" icon={<UploadOutlined />} block onClick={() => fileInput.current?.click()}>
-                {uploadedFile?.name ?? 'Choose PDF / DOC / DOCX'}
-              </Button>
-              <input
-                ref={fileInput}
-                type="file"
-                accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                className="hidden"
-                onChange={(event) => chooseFile(event.target.files?.[0] ?? null)}
-              />
-              <Button type="primary" htmlType="submit" block loading={uploadingCv}>
-                Save CV
-              </Button>
-              {uploadError && <div className="text-sm text-red-500">{uploadError}</div>}
-            </div>
-          </form>
-        </div>
-      </Modal>
+        onClose={closeCvModal}
+        cvs={cvs}
+        selectedCvId={selectedCvId}
+        onSelectCv={setSelectedCvId}
+        uploadName={uploadName}
+        onUploadNameChange={setUploadName}
+        uploadedFile={uploadedFile}
+        onChooseFile={chooseFile}
+        fileInputRef={fileInput}
+        onUpload={uploadInlineCv}
+        uploadingCv={uploadingCv}
+        uploadError={uploadError}
+      />
     </>
   )
 }

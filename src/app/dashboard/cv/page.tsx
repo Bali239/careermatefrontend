@@ -4,8 +4,8 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 're
 import { api } from '@/lib/axios'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import { toast } from 'sonner'
+import type { CV } from '../models'
 
-type CV = { id: string; name: string; fileName: string; contentType: string; size: number; extractionStatus?: 'pending' | 'processing' | 'completed' | 'failed'; extractionError?: string; createdAt: string }
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 const ACCEPTED = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
 const sizeLabel = (size: number) => size < 1024 * 1024 ? `${Math.max(1, Math.round(size / 1024))} KB` : `${(size / 1024 / 1024).toFixed(1)} MB`

@@ -9,7 +9,7 @@ import { DeleteOutlined, EditOutlined, MoreOutlined } from '@ant-design/icons'
 import { toast } from 'sonner'
 import { api } from '@/lib/axios'
 import { ChatNavigationProvider } from './ChatNavigationContext'
-import type { ChatSession } from './ChatNavigationContext'
+import type { ChatSession } from './models'
 
 const navItems = [
   { href: '/dashboard/profile', label: 'Profile', icon: UserOutlined },
