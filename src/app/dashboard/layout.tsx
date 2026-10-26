@@ -211,7 +211,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <MenuOutlined/>
             </button>
           </header>
-          <main className="min-h-0 flex-1 overflow-auto overscroll-contain px-[18px] py-6 md:px-[clamp(22px,4vw,56px)] md:py-[34px]">{children}</main>
+          <main className={`min-h-0 flex-1 ${pathname.startsWith('/dashboard/chat') ? 'overflow-hidden' : 'overflow-auto overscroll-contain px-[18px] py-6 md:px-[clamp(22px,4vw,56px)] md:py-[34px]'}`}>{children}</main>
         </div>
       </div>
     </ChatNavigationProvider>

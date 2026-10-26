@@ -5,12 +5,11 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 're
 import { Document, Packer, Paragraph, TextRun } from 'docx'
 import { jsPDF } from 'jspdf'
 import html2canvas from 'html2canvas'
-import { Button, Card, Empty, Input, Tag, Typography } from 'antd'
+import { Button, Card, Empty, Tag, Typography } from 'antd'
 import {
   FolderOpenOutlined,
   MessageOutlined,
   RobotOutlined,
-  SendOutlined,
   UploadOutlined,
   UserOutlined,
 } from '@ant-design/icons'
@@ -18,6 +17,7 @@ import { toast } from 'sonner'
 import { api } from '@/lib/axios'
 import { useChatNavigation } from '../ChatNavigationContext'
 import type { CV, ChatSession } from '../models'
+import ChatMessageComposer from './ChatMessageComposer'
 import CvSelectionModal from './CvSelectionModal'
 import JobDescriptionComposer from './JobDescriptionComposer'
 
@@ -40,6 +40,7 @@ export default function ChatPage() {
   const [jobDescription, setJobDescription] = useState('')
   const [loadingCVs, setLoadingCVs] = useState(true)
   const [creatingChat, setCreatingChat] = useState(false)
+  const [sendingMessage, setSendingMessage] = useState(false)
   const { chatList, setChatList, activeChatId, setActiveChatId } = useChatNavigation()
   const [messageDraft, setMessageDraft] = useState('')
   const [editorHtml, setEditorHtml] = useState('')
@@ -50,6 +51,7 @@ export default function ChatPage() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [cvModalOpen, setCvModalOpen] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
+  const messagesViewport = useRef<HTMLDivElement>(null)
 
   const activeChat = useMemo(() => chatList.find((chat) => chat.id === activeChatId) ?? null, [activeChatId, chatList])
   const canChat = !activeChat || !activeChat.isEditing
@@ -79,6 +81,11 @@ export default function ChatPage() {
   useEffect(() => {
     setEditorHtml(activeChat?.draftHtml || activeChat?.analysis?.editableHtml || '')
   }, [activeChat?.id, activeChat?.draftHtml, activeChat?.analysis?.editableHtml])
+
+  useEffect(() => {
+    const viewport = messagesViewport.current
+    if (viewport) viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' })
+  }, [activeChat?.id, activeChat?.messages.length])
 
   const chooseFile = (selected: File | null) => {
     setUploadError('')
@@ -180,10 +187,31 @@ export default function ChatPage() {
     }
   }
 
+  async function reAnalyzeCurrentChat() {
+    if (!activeChat) return
+    setCreatingChat(true)
+    try {
+      const response = await api.post<{ data: ChatSession }>('/chat', {
+        cvId: activeChat.cvId,
+        jobDescription: activeChat.jobDescription,
+        title: activeChat.title,
+      })
+      setChatList((items) => [response.data.data, ...items.filter((chat) => chat.id !== activeChat.id)])
+      setActiveChatId(response.data.data.id)
+      toast.success('A refreshed ATS analysis has been generated.')
+    } catch (reason: unknown) {
+      const responseMessage = (reason as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(responseMessage ?? 'Could not refresh the ATS analysis.')
+    } finally {
+      setCreatingChat(false)
+    }
+  }
+
   async function sendMessage() {
     if (!activeChat || !messageDraft.trim() || !canChat) return
     const text = messageDraft.trim()
     setMessageDraft('')
+    setSendingMessage(true)
     try {
       const response = await api.post<{ data: ChatSession }>('/chat/' + activeChat.id + '/messages', { message: text })
       setChatList((items) => items.map((chat) => chat.id === activeChat.id ? response.data.data : chat))
@@ -191,6 +219,8 @@ export default function ChatPage() {
     } catch (reason: unknown) {
       const responseMessage = (reason as { response?: { data?: { message?: string } } })?.response?.data?.message
       toast.error(responseMessage ?? 'Could not send your message.')
+    } finally {
+      setSendingMessage(false)
     }
   }
 
@@ -269,22 +299,17 @@ export default function ChatPage() {
 
   return (
     <>
-      <div className="flex h-[calc(100dvh-120px)] min-h-[700px] overflow-hidden rounded-[28px] border border-[#ececf4] bg-white shadow-[0_20px_70px_rgba(15,23,42,0.06)]">
-        <main className="flex min-w-0 flex-1 flex-col bg-[#ffffff]">
-          <div className="flex items-center justify-between border-b border-[#ececf4] px-6 py-4">
+      <div className="flex h-full min-h-0 flex-col bg-white">
+        <main className="flex min-h-0 flex-1 flex-col">
+          <div className="flex shrink-0 items-center justify-between border-b border-[#ececf4] px-6 py-4">
             <div>
               <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#8c8ff1]">AI job-fit coach</div>
               <div className="mt-1 text-xl font-bold text-[#1f2333]">{activeChat ? activeChat.title : 'CV analysis workspace'}</div>
             </div>
-            {activeChat && (
-              <div className="flex items-center gap-2">
-                <Button onClick={() => void reAnalyzeCurrentChat()} loading={creatingChat} size="middle">Refresh</Button>
-              </div>
-            )}
+            </div>
           </div>
 
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <div className="flex-1 space-y-4 overflow-y-auto px-6 py-6">
+          <div ref={messagesViewport} className="min-h-0 flex-1 overflow-y-auto px-6 py-6 pb-[360px]">
               {!activeChat ? (
                 <Card className="mx-auto max-w-3xl rounded-[24px] border-[#ececf4] bg-[#f9f9ff]">
                   <div className="space-y-4">
@@ -300,15 +325,6 @@ export default function ChatPage() {
                     <div className="grid gap-3 md:grid-cols-2">
                       <Button type="default" size="large" icon={<FolderOpenOutlined />} onClick={openCvModal}>Select CV</Button>
                       <Button type="default" size="large" icon={<UploadOutlined />} onClick={openCvModal}>Upload CV</Button>
-                    </div>
-                    <Input.TextArea
-                      value={jobDescription}
-                      onChange={(event) => setJobDescription(event.target.value)}
-                      placeholder="Paste the full job description here..."
-                      autoSize={{ minRows: 5, maxRows: 8 }}
-                    />
-                    <div className="flex justify-end">
-                      <Button type="primary" size="large" icon={<SendOutlined />} onClick={() => void createNewChat()} disabled={!selectedCvId || !jobDescription.trim() || creatingChat} loading={creatingChat}>Analyze CV</Button>
                     </div>
                   </div>
                 </Card>
@@ -347,12 +363,12 @@ export default function ChatPage() {
                     <div className="mx-auto max-w-4xl space-y-4">
                       {activeChat.messages.map((message) => (
                         <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-[80%] rounded-[22px] px-4 py-3 shadow-sm ${message.role === 'user' ? 'bg-[#1f2333] text-white' : 'bg-[#f3f5f9] text-[#1d2333]'}`}>
+                          <div className={`min-w-0 max-w-[85%] rounded-[22px] px-4 py-3 shadow-sm ${message.role === 'user' ? 'bg-[#1f2333] text-white' : 'bg-[#f3f5f9] text-[#1d2333]'}`}>
                             <div className="mb-1 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.15em] opacity-70">
                               {message.role === 'user' ? <UserOutlined /> : <RobotOutlined />}
                               {message.role === 'user' ? 'You' : 'AI'}
                             </div>
-                            <div className="whitespace-pre-wrap text-[15px] leading-7">{message.text}</div>
+                            <div className="whitespace-pre-wrap break-words text-[15px] leading-7">{message.text}</div>
                           </div>
                         </div>
                       ))}
@@ -360,31 +376,40 @@ export default function ChatPage() {
                   )}
                 </div>
               )}
-            </div>
-
-            <div className="border-t border-[#ececf4] bg-white px-6 py-4">
-              <div className="mx-auto max-w-4xl rounded-[26px] border border-[#e8eaf4] bg-[#f9faff] p-3 shadow-[0_12px_26px_rgba(15,23,42,0.04)]">
-                <div className="mb-3 flex gap-2">
-                  <Button type="default" icon={<FolderOpenOutlined />} onClick={openCvModal}>Select CV</Button>
-                  <Button type="default" icon={<UploadOutlined />} onClick={openCvModal}>Upload CV</Button>
-                  {activeChat && (
-                    <Button type="default" onClick={() => setEditorHtml(activeChat.draftHtml || activeChat.analysis?.editableHtml || '')}>
-                      Edit draft
-                    </Button>
-                  )}
-                </div>
-
-                <JobDescriptionComposer
-                  jobDescription={jobDescription}
-                  onJobDescriptionChange={setJobDescription}
-                  selectedCvLabel={selectedCvId ? cvs.find((cv) => cv.id === selectedCvId)?.name ?? 'Current CV' : null}
-                  creatingChat={creatingChat}
-                  onSend={() => void createNewChat()}
-                />
-              </div>
-            </div>
           </div>
         </main>
+      </div>
+
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-[#ececf4] bg-white/95 px-4 py-3 shadow-[0_-8px_24px_rgba(15,23,42,0.06)] backdrop-blur md:left-64">
+        <div className="mx-auto max-w-4xl rounded-[20px] border border-[#e8eaf4] bg-[#f9faff] p-3">
+          <div className="mb-3 flex flex-wrap gap-2">
+            <Button type="default" icon={<FolderOpenOutlined />} onClick={openCvModal}>Select CV</Button>
+            <Button type="default" icon={<UploadOutlined />} onClick={openCvModal}>Upload CV</Button>
+            {activeChat && (
+              <Button type="default" onClick={() => setEditorHtml(activeChat.draftHtml || activeChat.analysis?.editableHtml || '')}>
+                Edit draft
+              </Button>
+            )}
+          </div>
+
+          {activeChat ? (
+            <ChatMessageComposer
+              message={messageDraft}
+              onMessageChange={setMessageDraft}
+              disabled={!canChat}
+              sending={sendingMessage}
+              onSend={() => void sendMessage()}
+            />
+          ) : (
+            <JobDescriptionComposer
+              jobDescription={jobDescription}
+              onJobDescriptionChange={setJobDescription}
+              selectedCvLabel={selectedCvId ? cvs.find((cv) => cv.id === selectedCvId)?.name ?? 'Current CV' : null}
+              creatingChat={creatingChat}
+              onSend={() => void createNewChat()}
+            />
+          )}
+        </div>
       </div>
 
       <CvSelectionModal
