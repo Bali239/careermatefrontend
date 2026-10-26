@@ -187,26 +187,6 @@ export default function ChatPage() {
     }
   }
 
-  async function reAnalyzeCurrentChat() {
-    if (!activeChat) return
-    setCreatingChat(true)
-    try {
-      const response = await api.post<{ data: ChatSession }>('/chat', {
-        cvId: activeChat.cvId,
-        jobDescription: activeChat.jobDescription,
-        title: activeChat.title,
-      })
-      setChatList((items) => [response.data.data, ...items.filter((chat) => chat.id !== activeChat.id)])
-      setActiveChatId(response.data.data.id)
-      toast.success('A refreshed ATS analysis has been generated.')
-    } catch (reason: unknown) {
-      const responseMessage = (reason as { response?: { data?: { message?: string } } })?.response?.data?.message
-      toast.error(responseMessage ?? 'Could not refresh the ATS analysis.')
-    } finally {
-      setCreatingChat(false)
-    }
-  }
-
   async function sendMessage() {
     if (!activeChat || !messageDraft.trim() || !canChat) return
     const text = messageDraft.trim()
@@ -305,7 +285,6 @@ export default function ChatPage() {
             <div>
               <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#8c8ff1]">AI job-fit coach</div>
               <div className="mt-1 text-xl font-bold text-[#1f2333]">{activeChat ? activeChat.title : 'CV analysis workspace'}</div>
-            </div>
             </div>
           </div>
 
