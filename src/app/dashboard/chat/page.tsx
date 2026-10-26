@@ -9,7 +9,6 @@ import { Button, Card, Empty, Input, Modal, Tag, Typography } from 'antd'
 import {
   FolderOpenOutlined,
   MessageOutlined,
-  PlusOutlined,
   RobotOutlined,
   SendOutlined,
   UploadOutlined,
@@ -17,10 +16,10 @@ import {
 } from '@ant-design/icons'
 import { toast } from 'sonner'
 import { api } from '@/lib/axios'
+import { useChatNavigation } from '../ChatNavigationContext'
+import type { ChatSession } from '../ChatNavigationContext'
 
 type CV = { id: string; name: string; fileName: string; contentType: string; size: number; extractionStatus?: 'pending' | 'processing' | 'completed' | 'failed'; extractionError?: string; createdAt: string }
-type ChatMessage = { id: string; role: 'user' | 'assistant'; text: string; createdAt?: string }
-type ChatSession = { id: string; title: string; cvId: string; jobDescription: string; analysis: { summary: string; atsScore: number; strengths: string[]; gaps: string[]; missingSkills: string[]; recommendations: string[]; keywords: string[]; tailoredSummary: string; editableHtml: string; scoreBreakdown?: { label: string; score: number; note: string }[] } | null; draftHtml: string; isEditing: boolean; status: 'idle' | 'analyzing' | 'done' | 'error'; error: string; messages: ChatMessage[]; createdAt?: string; updatedAt?: string }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 const ACCEPTED = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
@@ -41,9 +40,7 @@ export default function ChatPage() {
   const [jobDescription, setJobDescription] = useState('')
   const [loadingCVs, setLoadingCVs] = useState(true)
   const [creatingChat, setCreatingChat] = useState(false)
-  const [chatList, setChatList] = useState<ChatSession[]>([])
-  const [activeChatId, setActiveChatId] = useState<string | null>(null)
-  const [chatLoading, setChatLoading] = useState(false)
+  const { chatList, setChatList, activeChatId, setActiveChatId } = useChatNavigation()
   const [messageDraft, setMessageDraft] = useState('')
   const [editorHtml, setEditorHtml] = useState('')
   const [savingEdit, setSavingEdit] = useState(false)
@@ -72,26 +69,16 @@ export default function ChatPage() {
     }
   }, [selectedCvId])
 
-  const loadChats = useCallback(async () => {
-    setChatLoading(true)
-    try {
-      const response = await api.get<{ data: ChatSession[] }>('/chat')
-      setChatList(response.data.data)
-      if (!activeChatId && response.data.data[0]) setActiveChatId(response.data.data[0].id)
-    } catch {
-      toast.error('Could not load your chat history.')
-    } finally {
-      setChatLoading(false)
-    }
-  }, [activeChatId])
-
   useEffect(() => {
     const timer = window.setTimeout(() => {
       void loadCVs()
-      void loadChats()
     }, 0)
     return () => window.clearTimeout(timer)
-  }, [loadCVs, loadChats])
+  }, [loadCVs])
+
+  useEffect(() => {
+    setEditorHtml(activeChat?.draftHtml || activeChat?.analysis?.editableHtml || '')
+  }, [activeChat?.id, activeChat?.draftHtml, activeChat?.analysis?.editableHtml])
 
   const chooseFile = (selected: File | null) => {
     setUploadError('')
@@ -283,56 +270,6 @@ export default function ChatPage() {
   return (
     <>
       <div className="flex h-[calc(100dvh-120px)] min-h-[700px] overflow-hidden rounded-[28px] border border-[#ececf4] bg-white shadow-[0_20px_70px_rgba(15,23,42,0.06)]">
-        <aside className="flex w-[300px] shrink-0 flex-col border-r border-[#ececf4] bg-[#f8f9fb]">
-          <div className="flex items-center justify-between border-b border-[#ececf4] px-5 py-4">
-            <div className="flex items-center gap-3">
-              <div className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-[#8d7cf0] to-[#5d4bc7] text-sm font-bold text-white">C</div>
-              <div>
-                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#9aa1b4]">Workspace</div>
-                <div className="text-sm font-semibold text-[#1f2333]">CareerMate</div>
-              </div>
-            </div>
-            <Button type="primary" shape="circle" icon={<PlusOutlined />} size="small" onClick={() => setActiveChatId(null)} />
-          </div>
-
-          <div className="px-4 py-4">
-            <Button type="primary" block icon={<PlusOutlined />} onClick={() => setActiveChatId(null)}>New chat</Button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto px-3 pb-3">
-            {chatLoading ? (
-              <div className="px-2 py-4 text-sm text-[#7d8397]">Loading chats…</div>
-            ) : chatList.length === 0 ? (
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No saved chats yet" className="pt-8" />
-            ) : (
-              <div className="space-y-2">
-                {chatList.map((chat) => (
-                  <button
-                    key={chat.id}
-                    type="button"
-                    onClick={() => {
-                      setActiveChatId(chat.id)
-                      setEditorHtml(chat.draftHtml || chat.analysis?.editableHtml || '')
-                    }}
-                    className={`flex w-full items-start gap-3 rounded-2xl border px-3 py-3 text-left transition ${chat.id === activeChatId ? 'border-[#dcd6ff] bg-white shadow-sm' : 'border-transparent bg-transparent hover:border-[#ececf4] hover:bg-white/80'}`}
-                  >
-                    <div className="mt-0.5 grid size-7 place-items-center rounded-lg bg-[#eef0ff] text-[#5d4bc7]">
-                      <MessageOutlined />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="truncate text-sm font-semibold text-[#1c2235]">{chat.title}</span>
-                        <span className="text-[10px] uppercase tracking-[0.12em] text-[#8d93a8]">{chat.status}</span>
-                      </div>
-                      <div className="mt-1 truncate text-xs text-[#6a7289]">{chat.analysis?.summary ?? chat.jobDescription}</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </aside>
-
         <main className="flex min-w-0 flex-1 flex-col bg-[#ffffff]">
           <div className="flex items-center justify-between border-b border-[#ececf4] px-6 py-4">
             <div>
