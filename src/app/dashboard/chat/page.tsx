@@ -5,12 +5,22 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 're
 import { Document, Packer, Paragraph, TextRun } from 'docx'
 import { jsPDF } from 'jspdf'
 import html2canvas from 'html2canvas'
+import { Button, Card, Empty, Input, Modal, Tag, Typography } from 'antd'
+import {
+  FolderOpenOutlined,
+  MessageOutlined,
+  PlusOutlined,
+  RobotOutlined,
+  SendOutlined,
+  UploadOutlined,
+  UserOutlined,
+} from '@ant-design/icons'
 import { toast } from 'sonner'
 import { api } from '@/lib/axios'
 
 type CV = { id: string; name: string; fileName: string; contentType: string; size: number; extractionStatus?: 'pending' | 'processing' | 'completed' | 'failed'; extractionError?: string; createdAt: string }
 type ChatMessage = { id: string; role: 'user' | 'assistant'; text: string; createdAt?: string }
-type ChatSession = { id: string; title: string; cvId: string; jobDescription: string; analysis: { summary: string; atsScore: number; strengths: string[]; gaps: string[]; missingSkills: string[]; recommendations: string[]; keywords: string[]; tailoredSummary: string; editableHtml: string } | null; draftHtml: string; isEditing: boolean; status: 'idle' | 'analyzing' | 'done' | 'error'; error: string; messages: ChatMessage[]; createdAt?: string; updatedAt?: string }
+type ChatSession = { id: string; title: string; cvId: string; jobDescription: string; analysis: { summary: string; atsScore: number; strengths: string[]; gaps: string[]; missingSkills: string[]; recommendations: string[]; keywords: string[]; tailoredSummary: string; editableHtml: string; scoreBreakdown?: { label: string; score: number; note: string }[] } | null; draftHtml: string; isEditing: boolean; status: 'idle' | 'analyzing' | 'done' | 'error'; error: string; messages: ChatMessage[]; createdAt?: string; updatedAt?: string }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 const ACCEPTED = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
@@ -41,6 +51,7 @@ export default function ChatPage() {
   const [uploadError, setUploadError] = useState('')
   const [uploadName, setUploadName] = useState('')
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
+  const [cvModalOpen, setCvModalOpen] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
 
   const activeChat = useMemo(() => chatList.find((chat) => chat.id === activeChatId) ?? null, [activeChatId, chatList])
@@ -162,6 +173,26 @@ export default function ChatPage() {
     }
   }
 
+  async function reAnalyzeCurrentChat() {
+    if (!activeChat) return
+    setCreatingChat(true)
+    try {
+      const response = await api.post<{ data: ChatSession }>('/chat', {
+        cvId: activeChat.cvId,
+        jobDescription: activeChat.jobDescription,
+        title: activeChat.title,
+      })
+      setChatList((items) => [response.data.data, ...items.filter((chat) => chat.id !== activeChat.id)])
+      setActiveChatId(response.data.data.id)
+      toast.success('A refreshed ATS analysis has been generated.')
+    } catch (reason: unknown) {
+      const responseMessage = (reason as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(responseMessage ?? 'Could not refresh the ATS analysis.')
+    } finally {
+      setCreatingChat(false)
+    }
+  }
+
   async function sendMessage() {
     if (!activeChat || !messageDraft.trim() || !canChat) return
     const text = messageDraft.trim()
@@ -209,22 +240,33 @@ export default function ChatPage() {
     if (!activeChat) return
     const target = document.getElementById('cv-editor-export')
     if (!target) return
-    const canvas = await html2canvas(target, { scale: 2, backgroundColor: '#ffffff' })
+    const canvas = await html2canvas(target, { scale: 2, backgroundColor: '#ffffff', useCORS: true })
     const pdf = new jsPDF('p', 'mm', 'a4')
     const imgData = canvas.toDataURL('image/png')
-    const pdfWidth = pdf.internal.pageSize.getWidth()
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
+    const pageWidth = pdf.internal.pageSize.getWidth()
+    const pageHeight = pdf.internal.pageSize.getHeight()
+    const imageRatio = canvas.width / canvas.height
+    const renderedWidth = pageWidth
+    const renderedHeight = renderedWidth / imageRatio
+    const yOffset = Math.max((pageHeight - renderedHeight) / 2, 0)
+    pdf.addImage(imgData, 'PNG', 0, yOffset, renderedWidth, renderedHeight)
     pdf.save(`${(activeChat.title || 'cv-draft').replace(/\s+/g, '-').toLowerCase()}.pdf`)
   }
 
   async function exportToDocx() {
     if (!activeChat) return
-    const text = toPlainText(editorHtml || activeChat.analysis?.editableHtml || '')
+    const content = editorHtml || activeChat.analysis?.editableHtml || ''
+    const normalized = toPlainText(content)
+    const paragraphs = normalized
+      ? normalized
+          .split(/\n+/)
+          .map((line) => line.trim())
+          .filter(Boolean)
+          .map((line) => new Paragraph({ children: [new TextRun({ text: line, break: 1 })] }))
+      : [new Paragraph('No content to export.')]
+
     const doc = new Document({
-      sections: [{
-        children: text ? text.split(/\n|\.|\!|\?/).filter(Boolean).map((line) => new Paragraph({ children: [new TextRun({ text: line.trim(), break: 1 })] })) : [new Paragraph('No content to export.')],
-      }],
+      sections: [{ children: paragraphs }],
     })
     const blob = await Packer.toBlob(doc)
     const url = URL.createObjectURL(blob)
@@ -235,161 +277,260 @@ export default function ChatPage() {
     setTimeout(() => URL.revokeObjectURL(url), 5000)
   }
 
-  return (
-    <div className="mx-auto max-w-7xl space-y-8 pb-10 text-slate-900">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-indigo-600">AI job-fit coach</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight">CV chat</h1>
-          <p className="mt-2 text-slate-600">Choose a CV, paste the job description, and let Gemini highlight what to improve.</p>
-        </div>
-      </header>
+  const openCvModal = () => setCvModalOpen(true)
+  const closeCvModal = () => setCvModalOpen(false)
 
-      <div className="grid gap-6 xl:grid-cols-[340px_1fr]">
-        <aside className="space-y-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div>
-            <h2 className="text-lg font-semibold">1. Pick a CV</h2>
-            {loadingCVs ? <div className="mt-3 text-sm text-slate-500">Loading CVs…</div> : (
-              <div className="mt-3 space-y-2">
-                {cvs.length ? cvs.map((cv) => (
-                  <button key={cv.id} type="button" onClick={() => setSelectedCvId(cv.id)} className={`flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left transition ${selectedCvId === cv.id ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white hover:border-indigo-200'}`}>
-                    <span className="min-w-0"><span className="block truncate font-medium">{cv.name}</span><span className="block truncate text-xs text-slate-500">{cv.fileName}</span></span>
-                    <span className="rounded bg-slate-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-600">{cv.contentType.split('/').pop()}</span>
+  return (
+    <>
+      <div className="flex h-[calc(100dvh-120px)] min-h-[700px] overflow-hidden rounded-[28px] border border-[#ececf4] bg-white shadow-[0_20px_70px_rgba(15,23,42,0.06)]">
+        <aside className="flex w-[300px] shrink-0 flex-col border-r border-[#ececf4] bg-[#f8f9fb]">
+          <div className="flex items-center justify-between border-b border-[#ececf4] px-5 py-4">
+            <div className="flex items-center gap-3">
+              <div className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-[#8d7cf0] to-[#5d4bc7] text-sm font-bold text-white">C</div>
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#9aa1b4]">Workspace</div>
+                <div className="text-sm font-semibold text-[#1f2333]">CareerMate</div>
+              </div>
+            </div>
+            <Button type="primary" shape="circle" icon={<PlusOutlined />} size="small" onClick={() => setActiveChatId(null)} />
+          </div>
+
+          <div className="px-4 py-4">
+            <Button type="primary" block icon={<PlusOutlined />} onClick={() => setActiveChatId(null)}>New chat</Button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-3 pb-3">
+            {chatLoading ? (
+              <div className="px-2 py-4 text-sm text-[#7d8397]">Loading chats…</div>
+            ) : chatList.length === 0 ? (
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No saved chats yet" className="pt-8" />
+            ) : (
+              <div className="space-y-2">
+                {chatList.map((chat) => (
+                  <button
+                    key={chat.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveChatId(chat.id)
+                      setEditorHtml(chat.draftHtml || chat.analysis?.editableHtml || '')
+                    }}
+                    className={`flex w-full items-start gap-3 rounded-2xl border px-3 py-3 text-left transition ${chat.id === activeChatId ? 'border-[#dcd6ff] bg-white shadow-sm' : 'border-transparent bg-transparent hover:border-[#ececf4] hover:bg-white/80'}`}
+                  >
+                    <div className="mt-0.5 grid size-7 place-items-center rounded-lg bg-[#eef0ff] text-[#5d4bc7]">
+                      <MessageOutlined />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="truncate text-sm font-semibold text-[#1c2235]">{chat.title}</span>
+                        <span className="text-[10px] uppercase tracking-[0.12em] text-[#8d93a8]">{chat.status}</span>
+                      </div>
+                      <div className="mt-1 truncate text-xs text-[#6a7289]">{chat.analysis?.summary ?? chat.jobDescription}</div>
+                    </div>
                   </button>
-                )) : <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-500">No CVs yet. Upload one below.</p>}
+                ))}
+              </div>
+            )}
+          </div>
+        </aside>
+
+        <main className="flex min-w-0 flex-1 flex-col bg-[#ffffff]">
+          <div className="flex items-center justify-between border-b border-[#ececf4] px-6 py-4">
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#8c8ff1]">AI job-fit coach</div>
+              <div className="mt-1 text-xl font-bold text-[#1f2333]">{activeChat ? activeChat.title : 'CV analysis workspace'}</div>
+            </div>
+            {activeChat && (
+              <div className="flex items-center gap-2">
+                <Button onClick={() => void reAnalyzeCurrentChat()} loading={creatingChat} size="middle">Refresh</Button>
               </div>
             )}
           </div>
 
-          <form onSubmit={uploadInlineCv} className="space-y-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
-            <h3 className="text-sm font-semibold text-slate-800">Upload new CV</h3>
-            <input value={uploadName} onChange={(event) => setUploadName(event.target.value)} placeholder="CV name" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
-            <button type="button" onClick={() => fileInput.current?.click()} className="flex w-full items-center justify-between rounded-lg border border-slate-300 bg-white px-3 py-2 text-left text-sm text-slate-600">
-              <span className="truncate">{uploadedFile?.name ?? 'Choose PDF/DOC/DOCX'}</span>
-              <span className="rounded bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">Browse</span>
-            </button>
-            <input ref={fileInput} type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" onChange={(event) => chooseFile(event.target.files?.[0] ?? null)} />
-            <button type="submit" disabled={uploadingCv} className="w-full rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60">{uploadingCv ? 'Uploading…' : 'Save CV to library'}</button>
-            {uploadError && <p className="text-xs text-rose-600">{uploadError}</p>}
-          </form>
-        </aside>
-
-        <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div>
-            <label className="block text-sm font-semibold text-slate-700">2. Job description</label>
-            <textarea value={jobDescription} onChange={(event) => setJobDescription(event.target.value)} rows={8} placeholder="Paste the job description here..." className="mt-2 w-full rounded-xl border border-slate-300 bg-slate-50 p-3 text-sm text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="text-sm text-slate-500">{activeChat ? `Current conversation: ${activeChat.title}` : 'Start a new chat on the selected CV'}</div>
-            <button type="button" onClick={() => void createNewChat()} disabled={creatingChat || !selectedCvId || !jobDescription.trim()} className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60">{creatingChat ? 'Analyzing…' : 'Analyze my CV'}</button>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Chat history</h2>
-              <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">{chatList.length} saved</span>
-            </div>
-            <div className="max-h-56 space-y-2 overflow-auto pr-1">
-              {chatLoading ? <div className="text-sm text-slate-500">Loading conversations…</div> : chatList.length ? chatList.map((chat) => (
-                <button key={chat.id} type="button" onClick={() => {
-                  setActiveChatId(chat.id)
-                  setEditorHtml(chat.draftHtml || chat.analysis?.editableHtml || '')
-                }} className={`w-full rounded-xl border px-3 py-2 text-left transition ${chat.id === activeChatId ? 'border-indigo-500 bg-white shadow-sm' : 'border-slate-200 bg-white hover:border-indigo-200'}`}>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="truncate font-medium">{chat.title}</span>
-                    <span className="text-[10px] uppercase tracking-wide text-slate-500">{chat.status}</span>
-                  </div>
-                  <div className="mt-1 truncate text-xs text-slate-500">{chat.analysis?.summary ?? chat.jobDescription}</div>
-                </button>
-              )) : <p className="text-sm text-slate-500">No saved conversations yet.</p>}
-            </div>
-          </div>
-
-          {activeChat && (
-            <div className="space-y-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-3">
-                <div>
-                  <h3 className="text-lg font-semibold">{activeChat.title}</h3>
-                  <p className="text-xs text-slate-500">ATS road map for your chosen CV</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {activeChat.isEditing ? <button type="button" onClick={() => void exitEditMode()} className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Exit edit mode</button> : <button type="button" onClick={() => {
-                    if (!activeChat) return
-                    setEditorHtml(activeChat.draftHtml || activeChat.analysis?.editableHtml || '')
-                    void api.post('/chat/' + activeChat.id + '/edit', { draftHtml: activeChat.draftHtml || activeChat.analysis?.editableHtml || '', isEditing: true })
-                    setChatList((items) => items.map((chat) => chat.id === activeChat.id ? { ...chat, isEditing: true } : chat))
-                  }} className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700">Edit CV</button>}
-                </div>
-              </div>
-
-              {activeChat.analysis && (
-                <div className="grid gap-4 lg:grid-cols-3">
-                  <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-indigo-700">ATS match</p>
-                    <div className="mt-2 text-3xl font-bold text-indigo-800">{activeChat.analysis.atsScore}%</div>
-                  </div>
-                  <div className="rounded-xl border border-slate-200 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Keywords</p>
-                    <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                      {activeChat.analysis.keywords.length ? activeChat.analysis.keywords.map((keyword) => <span key={keyword} className="rounded-full bg-slate-100 px-2 py-1 text-slate-700">{keyword}</span>) : <span className="text-slate-500">No keywords extracted.</span>}
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="flex-1 space-y-4 overflow-y-auto px-6 py-6">
+              {!activeChat ? (
+                <Card className="mx-auto max-w-3xl rounded-[24px] border-[#ececf4] bg-[#f9f9ff]">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="grid size-11 place-items-center rounded-2xl bg-[#eef0ff] text-[#5d4bc7]">
+                        <RobotOutlined style={{ fontSize: 20 }} />
+                      </div>
+                      <div>
+                        <Typography.Title level={4} className="!mb-0">Choose your CV and job description</Typography.Title>
+                        <div className="text-sm text-[#6a7289]">Your insight will be tailored to the role you want to target.</div>
+                      </div>
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <Button type="default" size="large" icon={<FolderOpenOutlined />} onClick={openCvModal}>Select CV</Button>
+                      <Button type="default" size="large" icon={<UploadOutlined />} onClick={openCvModal}>Upload CV</Button>
+                    </div>
+                    <Input.TextArea
+                      value={jobDescription}
+                      onChange={(event) => setJobDescription(event.target.value)}
+                      placeholder="Paste the full job description here..."
+                      autoSize={{ minRows: 5, maxRows: 8 }}
+                    />
+                    <div className="flex justify-end">
+                      <Button type="primary" size="large" icon={<SendOutlined />} onClick={() => void createNewChat()} disabled={!selectedCvId || !jobDescription.trim() || creatingChat} loading={creatingChat}>Analyze CV</Button>
                     </div>
                   </div>
-                  <div className="rounded-xl border border-slate-200 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Missing skills</p>
-                    <div className="mt-2 space-y-1 text-sm text-slate-700">
-                      {activeChat.analysis.missingSkills.length ? activeChat.analysis.missingSkills.map((skill) => <div key={skill}>• {skill}</div>) : <div className="text-slate-500">None flagged.</div>}
+                </Card>
+              ) : (
+                <div className="mx-auto max-w-4xl space-y-5">
+                  {activeChat.analysis && (
+                    <Card className="rounded-[24px] border-[#ececf4] bg-[#f9f9ff]">
+                      <div className="grid gap-4 md:grid-cols-3">
+                        <div className="rounded-2xl border border-[#dfe3ff] bg-[#eef0ff] p-4">
+                          <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#5d4bc7]">ATS match</div>
+                          <div className="mt-2 text-4xl font-bold text-[#2b2f73]">{activeChat.analysis.atsScore}%</div>
+                        </div>
+                        <div className="rounded-2xl border border-[#edf1f5] bg-white p-4">
+                          <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#7d8397]">Keywords</div>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {activeChat.analysis.keywords.length > 0 ? activeChat.analysis.keywords.map((keyword) => (
+                              <Tag key={keyword} color="blue">{keyword}</Tag>
+                            )) : <span className="text-sm text-[#7d8397]">No keywords extracted.</span>}
+                          </div>
+                        </div>
+                        <div className="rounded-2xl border border-[#edf1f5] bg-white p-4">
+                          <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#7d8397]">Missing skills</div>
+                          <div className="mt-3 space-y-1 text-sm text-[#3b4257]">
+                            {activeChat.analysis.missingSkills.length > 0 ? activeChat.analysis.missingSkills.map((skill) => <div key={skill}>• {skill}</div>) : <div className="text-[#7d8397]">No major gaps detected.</div>}
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  )}
+
+                  {activeChat.messages.length === 0 ? (
+                    <Card className="mx-auto max-w-3xl rounded-[24px] border-[#ececf4] bg-white">
+                      <Empty description="Start the conversation by asking for a rewrite, keyword match, or a stronger summary." />
+                    </Card>
+                  ) : (
+                    <div className="mx-auto max-w-4xl space-y-4">
+                      {activeChat.messages.map((message) => (
+                        <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                          <div className={`max-w-[80%] rounded-[22px] px-4 py-3 shadow-sm ${message.role === 'user' ? 'bg-[#1f2333] text-white' : 'bg-[#f3f5f9] text-[#1d2333]'}`}>
+                            <div className="mb-1 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.15em] opacity-70">
+                              {message.role === 'user' ? <UserOutlined /> : <RobotOutlined />}
+                              {message.role === 'user' ? 'You' : 'AI'}
+                            </div>
+                            <div className="whitespace-pre-wrap text-[15px] leading-7">{message.text}</div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
+            </div>
 
-              <div className="space-y-3">
-                {activeChat.messages.map((message) => (
-                  <div key={message.id} className={`max-w-3xl rounded-2xl px-4 py-3 text-sm ${message.role === 'user' ? 'ml-auto bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700'}`}>
-                    <div className="whitespace-pre-wrap leading-6">{message.text}</div>
-                  </div>
-                ))}
-              </div>
+            <div className="border-t border-[#ececf4] bg-white px-6 py-4">
+              <div className="mx-auto max-w-4xl rounded-[26px] border border-[#e8eaf4] bg-[#f9faff] p-3 shadow-[0_12px_26px_rgba(15,23,42,0.04)]">
+                <div className="mb-3 flex gap-2">
+                  <Button type="default" icon={<FolderOpenOutlined />} onClick={openCvModal}>Select CV</Button>
+                  <Button type="default" icon={<UploadOutlined />} onClick={openCvModal}>Upload CV</Button>
+                  {activeChat && (
+                    <Button type="default" onClick={() => setEditorHtml(activeChat.draftHtml || activeChat.analysis?.editableHtml || '')}>
+                      Edit draft
+                    </Button>
+                  )}
+                </div>
 
-              <div className="space-y-3">
-                <label className="block text-sm font-semibold text-slate-700">Send a follow-up</label>
-                <textarea value={messageDraft} onChange={(event) => setMessageDraft(event.target.value)} rows={4} disabled={!canChat} placeholder={canChat ? 'Ask the assistant to tailor wording, rewrite achievements, or suggest stronger keywords...' : 'Finish or exit edit mode before continuing the chat.'} className="w-full rounded-xl border border-slate-300 bg-slate-50 p-3 text-sm text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:opacity-60" />
-                <div className="flex justify-end"><button type="button" onClick={() => void sendMessage()} disabled={!canChat || !messageDraft.trim()} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60">Send</button></div>
-              </div>
+                <div className="space-y-3">
+                  <Input.TextArea
+                    value={jobDescription}
+                    onChange={(event) => setJobDescription(event.target.value)}
+                    placeholder="Paste the job description here..."
+                    autoSize={{ minRows: 2, maxRows: 5 }}
+                    className="!rounded-[18px] border-[#e5e7ef] bg-white !px-4 !py-3"
+                  />
 
-              <div className="space-y-4 rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <h3 className="text-lg font-semibold">Edited CV draft</h3>
-                  <div className="flex gap-2">
-                    <button type="button" onClick={() => void saveDraft()} disabled={savingEdit} className="rounded-lg border border-indigo-200 bg-white px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50 disabled:opacity-60">{savingEdit ? 'Saving…' : 'Save draft'}</button>
-                    <button type="button" onClick={() => void exportToPdf()} className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700">PDF</button>
-                    <button type="button" onClick={() => void exportToDocx()} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">DOCX</button>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {selectedCvId ? (
+                        <Tag color="geekblue">Selected CV: {cvs.find((cv) => cv.id === selectedCvId)?.name ?? 'Current CV'}</Tag>
+                      ) : (
+                        <Tag color="default">No CV selected</Tag>
+                      )}
+                      {jobDescription.trim().length > 0 && <Tag color="purple">{jobDescription.trim().length} chars</Tag>}
+                    </div>
+
+                    <Button
+                      type="primary"
+                      size="large"
+                      icon={<SendOutlined />}
+                      loading={creatingChat}
+                      onClick={() => void createNewChat()}
+                      disabled={!selectedCvId || !jobDescription.trim() || creatingChat}
+                    >
+                      Send
+                    </Button>
                   </div>
                 </div>
-                <Editor
-                  value={editorHtml}
-                  onEditorChange={(value) => setEditorHtml(value ?? '')}
-                  disabled={!activeChat.isEditing}
-                  apiKey="no-api-key"
-                  init={{
-                    height: 420,
-                    menubar: false,
-                    plugins: ['advlist','autolink','lists','link','image','charmap','preview','anchor','searchreplace','wordcount','table'],
-                    toolbar: 'undo redo | formatselect | bold italic underline | alignleft aligncenter alignright | bullist numlist outdent indent | link',
-                    content_style: 'body { font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #1f2937; } h1,h2,h3 { color: #111827; }',
-                    placeholder: 'Edit your CV content here...',
-                    skin: 'oxide',
-                    branding: false,
-                  }}
-                  onInit={() => setEditorHtml(activeChat.draftHtml || activeChat.analysis?.editableHtml || '')}
-                />
-                <div id="cv-editor-export" className="hidden" dangerouslySetInnerHTML={{ __html: editorHtml || activeChat.analysis?.editableHtml || '' }} />
               </div>
             </div>
-          )}
-        </section>
+          </div>
+        </main>
       </div>
-    </div>
+
+      <Modal
+        title="Choose or upload your CV"
+        open={cvModalOpen}
+        onCancel={closeCvModal}
+        footer={null}
+        width={900}
+      >
+        <div className="grid gap-4 md:grid-cols-[1.15fr_0.85fr]">
+          <div>
+            <div className="mb-3 text-sm font-semibold text-[#2c3147]">Saved CVs</div>
+            {cvs.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-[#e5e7ef] bg-[#f8f9ff] p-4 text-sm text-[#6a7289]">No CV files yet.</div>
+            ) : (
+              <div className="space-y-2">
+                {cvs.map((cv) => (
+                  <button
+                    key={cv.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedCvId(cv.id)
+                      closeCvModal()
+                    }}
+                    className={`flex w-full items-center justify-between rounded-2xl border px-3 py-3 text-left ${selectedCvId === cv.id ? 'border-[#cfc8ff] bg-[#f1efff]' : 'border-[#eef0f5] bg-white hover:border-[#dfe3ff]'}`}
+                  >
+                    <div className="min-w-0">
+                      <div className="truncate font-semibold text-[#1f2333]">{cv.name}</div>
+                      <div className="truncate text-xs text-[#6a7289]">{cv.fileName}</div>
+                    </div>
+                    <Tag color="processing">{cv.contentType.split('/').pop()}</Tag>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <form onSubmit={uploadInlineCv} className="rounded-[20px] border border-dashed border-[#dfe3ff] bg-[#f8f9ff] p-4">
+            <div className="mb-3 text-sm font-semibold text-[#2c3147]">Upload a new CV</div>
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <Input value={uploadName} onChange={(event) => setUploadName(event.target.value)} placeholder="CV name" />
+              <Button type="default" icon={<UploadOutlined />} block onClick={() => fileInput.current?.click()}>
+                {uploadedFile?.name ?? 'Choose PDF / DOC / DOCX'}
+              </Button>
+              <input
+                ref={fileInput}
+                type="file"
+                accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                className="hidden"
+                onChange={(event) => chooseFile(event.target.files?.[0] ?? null)}
+              />
+              <Button type="primary" htmlType="submit" block loading={uploadingCv}>
+                Save CV
+              </Button>
+              {uploadError && <div className="text-sm text-red-500">{uploadError}</div>}
+            </div>
+          </form>
+        </div>
+      </Modal>
+    </>
   )
 }

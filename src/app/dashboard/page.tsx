@@ -9,17 +9,14 @@ export default function DashboardPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (ready && !user) router.replace("/auth/login");
+    if (!ready) return;
+    if (!user) router.replace("/auth/login");
+    else router.replace("/dashboard/profile");
   }, [ready, user, router]);
 
   if (!ready || !user) {
     return <main className="flex min-h-[50vh] items-center justify-center text-sm text-slate-500" aria-live="polite">Checking your session…</main>;
   }
 
-  return (
-    <main>
-      <h1>Dashboard</h1>
-      <p>Welcome, {user.name}.</p>
-    </main>
-  );
+  return null;
 }

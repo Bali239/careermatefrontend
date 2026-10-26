@@ -6,7 +6,6 @@ import React, { useEffect, useRef, useState } from 'react'
 import { AppstoreOutlined, FileTextOutlined, MenuOutlined, MessageOutlined, UserOutlined } from '@ant-design/icons'
 
 const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: AppstoreOutlined },
   { href: '/dashboard/profile', label: 'Profile', icon: UserOutlined },
   { href: '/dashboard/cv', label: 'CV library', icon: FileTextOutlined },
   { href: '/dashboard/chat', label: 'Chat', icon: MessageOutlined },
