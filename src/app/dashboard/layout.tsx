@@ -8,6 +8,7 @@ import { FileTextOutlined, MenuOutlined, MessageOutlined, PlusOutlined, UserOutl
 import { DeleteOutlined, EditOutlined, MoreOutlined } from '@ant-design/icons'
 import { toast } from 'sonner'
 import { api } from '@/lib/axios'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 import { ChatNavigationProvider } from './ChatNavigationContext'
 import type { ChatSession } from './models'
 
@@ -24,6 +25,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [activeChatId, setActiveChatId] = useState<string | null>(null)
   const [editingChatId, setEditingChatId] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState('')
+  const [chatToDelete, setChatToDelete] = useState<ChatSession | null>(null)
+  const [deletingChat, setDeletingChat] = useState(false)
   const [chatLoading, setChatLoading] = useState(false)
   const previousPath = useRef(pathname)
 
@@ -66,12 +69,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [menuOpen])
 
   const handleDeleteChat = async (id: string) => {
+    setDeletingChat(true)
     try {
       await api.delete(`/chat/${id}`)
       setChatList((prev) => prev.filter((c) => c.id !== id))
       if (activeChatId === id) setActiveChatId(null)
+      setChatToDelete(null)
     } catch {
       toast.error('Could not delete chat.')
+    } finally {
+      setDeletingChat(false)
     }
   }
 
@@ -169,7 +176,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                         menu={{
                                           items: [
                                             { key: 'rename', icon: <EditOutlined />, label: 'Rename', onClick: () => { setEditingChatId(chat.id); setEditTitle(chat.title) } },
-                                            { key: 'delete', icon: <DeleteOutlined />, label: 'Delete', danger: true, onClick: () => handleDeleteChat(chat.id) },
+                                            { key: 'delete', icon: <DeleteOutlined />, label: 'Delete', danger: true, onClick: () => setChatToDelete(chat) },
                                           ],
                                         }}
                                       >
@@ -213,6 +220,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </header>
           <main className={`min-h-0 flex-1 ${pathname.startsWith('/dashboard/chat') ? 'overflow-hidden' : 'overflow-auto overscroll-contain px-[18px] py-6 md:px-[clamp(22px,4vw,56px)] md:py-[34px]'}`}>{children}</main>
         </div>
+        <ConfirmModal
+          open={chatToDelete !== null}
+          title="Delete chat?"
+          description={chatToDelete ? `Are you sure you want to delete "${chatToDelete.title}"? This action cannot be undone.` : ''}
+          confirmLabel="Delete chat"
+          destructive
+          loading={deletingChat}
+          onCancel={() => setChatToDelete(null)}
+          onConfirm={() => chatToDelete ? handleDeleteChat(chatToDelete.id) : undefined}
+        />
       </div>
     </ChatNavigationProvider>
   )
