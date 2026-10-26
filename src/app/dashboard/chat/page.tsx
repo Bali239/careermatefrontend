@@ -17,9 +17,8 @@ import { toast } from 'sonner'
 import { api } from '@/lib/axios'
 import { useChatNavigation } from '../ChatNavigationContext'
 import type { CV, ChatSession } from '../models'
-import ChatMessageComposer from './ChatMessageComposer'
+import ChatComposer from './ChatComposer'
 import CvSelectionModal from './CvSelectionModal'
-import JobDescriptionComposer from './JobDescriptionComposer'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 const ACCEPTED = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
@@ -280,112 +279,31 @@ export default function ChatPage() {
   return (
     <>
       <div className="flex h-full min-h-0 flex-col bg-white">
-        <main className="flex min-h-0 flex-1 flex-col">
-          <div className="flex shrink-0 items-center justify-between border-b border-[#ececf4] px-6 py-4">
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#8c8ff1]">AI job-fit coach</div>
-              <div className="mt-1 text-xl font-bold text-[#1f2333]">{activeChat ? activeChat.title : 'CV analysis workspace'}</div>
-            </div>
-          </div>
-
-          <div ref={messagesViewport} className="min-h-0 flex-1 overflow-y-auto px-6 py-6 pb-[360px]">
-              {!activeChat ? (
-                <Card className="mx-auto max-w-3xl rounded-[24px] border-[#ececf4] bg-[#f9f9ff]">
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <div className="grid size-11 place-items-center rounded-2xl bg-[#eef0ff] text-[#5d4bc7]">
-                        <RobotOutlined style={{ fontSize: 20 }} />
-                      </div>
-                      <div>
-                        <Typography.Title level={4} className="!mb-0">Choose your CV and job description</Typography.Title>
-                        <div className="text-sm text-[#6a7289]">Your insight will be tailored to the role you want to target.</div>
-                      </div>
-                    </div>
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <Button type="default" size="large" icon={<FolderOpenOutlined />} onClick={openCvModal}>Select CV</Button>
-                      <Button type="default" size="large" icon={<UploadOutlined />} onClick={openCvModal}>Upload CV</Button>
-                    </div>
-                  </div>
-                </Card>
-              ) : (
-                <div className="mx-auto max-w-4xl space-y-5">
-                  {activeChat.analysis && (
-                    <Card className="rounded-[24px] border-[#ececf4] bg-[#f9f9ff]">
-                      <div className="grid gap-4 md:grid-cols-3">
-                        <div className="rounded-2xl border border-[#dfe3ff] bg-[#eef0ff] p-4">
-                          <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#5d4bc7]">ATS match</div>
-                          <div className="mt-2 text-4xl font-bold text-[#2b2f73]">{activeChat.analysis.atsScore}%</div>
-                        </div>
-                        <div className="rounded-2xl border border-[#edf1f5] bg-white p-4">
-                          <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#7d8397]">Keywords</div>
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            {activeChat.analysis.keywords.length > 0 ? activeChat.analysis.keywords.map((keyword) => (
-                              <Tag key={keyword} color="blue">{keyword}</Tag>
-                            )) : <span className="text-sm text-[#7d8397]">No keywords extracted.</span>}
-                          </div>
-                        </div>
-                        <div className="rounded-2xl border border-[#edf1f5] bg-white p-4">
-                          <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#7d8397]">Missing skills</div>
-                          <div className="mt-3 space-y-1 text-sm text-[#3b4257]">
-                            {activeChat.analysis.missingSkills.length > 0 ? activeChat.analysis.missingSkills.map((skill) => <div key={skill}>• {skill}</div>) : <div className="text-[#7d8397]">No major gaps detected.</div>}
-                          </div>
-                        </div>
-                      </div>
-                    </Card>
-                  )}
-
-                  {activeChat.messages.length === 0 ? (
-                    <Card className="mx-auto max-w-3xl rounded-[24px] border-[#ececf4] bg-white">
-                      <Empty description="Start the conversation by asking for a rewrite, keyword match, or a stronger summary." />
-                    </Card>
-                  ) : (
-                    <div className="mx-auto max-w-4xl space-y-4">
-                      {activeChat.messages.map((message) => (
-                        <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`min-w-0 max-w-[85%] rounded-[22px] px-4 py-3 shadow-sm ${message.role === 'user' ? 'bg-[#1f2333] text-white' : 'bg-[#f3f5f9] text-[#1d2333]'}`}>
-                            <div className="mb-1 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.15em] opacity-70">
-                              {message.role === 'user' ? <UserOutlined /> : <RobotOutlined />}
-                              {message.role === 'user' ? 'You' : 'AI'}
-                            </div>
-                            <div className="whitespace-pre-wrap break-words text-[15px] leading-7">{message.text}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-          </div>
-        </main>
+        
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-[#ececf4] bg-white/95 px-4 py-3 shadow-[0_-8px_24px_rgba(15,23,42,0.06)] backdrop-blur md:left-64">
-        <div className="mx-auto max-w-4xl rounded-[20px] border border-[#e8eaf4] bg-[#f9faff] p-3">
-          <div className="mb-3 flex flex-wrap gap-2">
-            <Button type="default" icon={<FolderOpenOutlined />} onClick={openCvModal}>Select CV</Button>
-            <Button type="default" icon={<UploadOutlined />} onClick={openCvModal}>Upload CV</Button>
-            {activeChat && (
-              <Button type="default" onClick={() => setEditorHtml(activeChat.draftHtml || activeChat.analysis?.editableHtml || '')}>
-                Edit draft
-              </Button>
-            )}
-          </div>
-
+      <div className="fixed inset-x-0 bottom-0 z-20 px-4 py-3 md:left-64">
+        <div className="mx-auto max-w-4xl p-3">
           {activeChat ? (
-            <ChatMessageComposer
-              message={messageDraft}
-              onMessageChange={setMessageDraft}
+            <ChatComposer
+              mode="message"
+              value={messageDraft}
+              onChange={setMessageDraft}
+              selectedCvLabel={cvs.find((cv) => cv.id === activeChat.cvId)?.name ?? 'Current CV'}
               disabled={!canChat}
-              sending={sendingMessage}
-              onSend={() => void sendMessage()}
+              submitting={sendingMessage}
+              onSubmit={() => void sendMessage()}
+              onEditDraft={() => setEditorHtml(activeChat.draftHtml || activeChat.analysis?.editableHtml || '')}
             />
           ) : (
-            <JobDescriptionComposer
-              jobDescription={jobDescription}
-              onJobDescriptionChange={setJobDescription}
+            <ChatComposer
+              mode="analysis"
+              value={jobDescription}
+              onChange={setJobDescription}
               selectedCvLabel={selectedCvId ? cvs.find((cv) => cv.id === selectedCvId)?.name ?? 'Current CV' : null}
-              creatingChat={creatingChat}
-              onSend={() => void createNewChat()}
+              submitting={creatingChat}
+              onSubmit={() => void createNewChat()}
+              onSelectCv={openCvModal}
             />
           )}
         </div>
