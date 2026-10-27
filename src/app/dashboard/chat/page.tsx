@@ -61,9 +61,6 @@ export default function ChatPage() {
     try {
       const nextCvs = await cvService.list();
       setCvs(nextCvs);
-      if (!selectedCvId && nextCvs[0]) setSelectedCvId(nextCvs[0].id);
-      if (selectedCvId && !nextCvs.some((cv) => cv.id === selectedCvId))
-        setSelectedCvId(nextCvs[0]?.id ?? '');
     } catch {
       toast.error('Could not load your CVs.');
     } finally {
