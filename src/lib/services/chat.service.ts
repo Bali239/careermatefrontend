@@ -17,6 +17,23 @@ export const chatService = {
     return response.data.data;
   },
 
+  analyze: async (id: string) => {
+    const response = await api.post<{ data: ChatSession }>(`/chat/${id}/analyze`);
+    return response.data.data;
+  },
+
+  rewrite: async (id: string) => {
+    const response = await api.post<{ data: ChatSession }>(`/chat/${id}/rewrite`);
+    return response.data.data;
+  },
+
+  downloadGenerated: async (id: string, versionId: string, format: 'docx' | 'pdf') => {
+    const response = await api.get(`/chat/${id}/generated/${versionId}/${format}`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
   sendMessage: async (id: string, message: string) => {
     const response = await api.post<{ data: ChatSession }>(`/chat/${id}/messages`, { message });
     return response.data.data;

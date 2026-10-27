@@ -10,11 +10,21 @@ import ChatEmpty from '@/components/chat/ChatEmpty';
 type ChatConversationPanelProps = {
   activeChat: ChatSession | null;
   messagesViewport: RefObject<HTMLDivElement | null>;
+  onRewrite?: () => void;
+  onDownloadGenerated?: (versionId: string, format: 'docx' | 'pdf') => void;
+  rewriting?: boolean;
+  downloadingVersionId?: string;
+  downloadingFormat?: 'docx' | 'pdf';
 };
 
 export default function ChatConversationPanel({
   activeChat,
   messagesViewport,
+  onRewrite,
+  onDownloadGenerated,
+  rewriting,
+  downloadingVersionId,
+  downloadingFormat,
 }: ChatConversationPanelProps) {
   return (
     <div className="flex h-full min-h-0 flex-col bg-white">
@@ -35,7 +45,15 @@ export default function ChatConversationPanel({
             <ChatEmpty />
           ) : (
             <div className="mx-auto max-w-4xl space-y-5">
-              <ChatAnalysisCard analysis={activeChat.analysis} />
+              <ChatAnalysisCard
+                analysis={activeChat.analysis}
+                generatedCvVersions={activeChat.generatedCvVersions}
+                onRewrite={onRewrite}
+                onDownloadGenerated={onDownloadGenerated}
+                rewriting={rewriting}
+                downloadingVersionId={downloadingVersionId}
+                downloadingFormat={downloadingFormat}
+              />
 
               {activeChat.messages.length === 0 ? (
                 <Card className="mx-auto max-w-3xl rounded-[24px] border-[#ececf4] bg-white">

@@ -213,6 +213,57 @@ export default function ChatPage() {
     }
   }
 
+  const [rewritingChat, setRewritingChat] = useState(false);
+  const [downloadingFormat, setDownloadingFormat] = useState<'docx' | 'pdf' | null>(null);
+  const [downloadingVersionId, setDownloadingVersionId] = useState('');
+
+  async function rewriteCurrentCv() {
+    if (!activeChat) return;
+    setRewritingChat(true);
+    try {
+      const updated = await chatService.rewrite(activeChat.id);
+      setChatList((items) => items.map((chat) => (chat.id === activeChat.id ? updated : chat)));
+      setActiveChatId(updated.id);
+      toast.success('A tailored CV version is being generated for download.');
+    } catch (reason: unknown) {
+      const responseMessage = (reason as { response?: { data?: { message?: string } } })?.response
+        ?.data?.message;
+      toast.error(responseMessage ?? 'Could not generate the rewritten CV.');
+    } finally {
+      setRewritingChat(false);
+    }
+  }
+
+  async function downloadGeneratedVersion(versionId: string, format: 'docx' | 'pdf') {
+    if (!activeChat) return;
+    setDownloadingVersionId(versionId);
+    setDownloadingFormat(format);
+    try {
+      const blob = await chatService.downloadGenerated(activeChat.id, versionId, format);
+      const url = URL.createObjectURL(blob);
+      const version = activeChat.generatedCvVersions?.find((entry) => entry.id === versionId);
+      const downloadName =
+        format === 'pdf'
+          ? version?.pdfFileName || `${(activeChat.title || 'rewrite').replace(/\s+/g, '-').toLowerCase()}.pdf`
+          : version?.docxFileName || `${(activeChat.title || 'rewrite').replace(/\s+/g, '-').toLowerCase()}.docx`;
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = downloadName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      toast.success(`Downloaded the ${format.toUpperCase()} version.`);
+    } catch (reason: unknown) {
+      const responseMessage = (reason as { response?: { data?: { message?: string } } })?.response
+        ?.data?.message;
+      toast.error(responseMessage ?? 'Could not download the generated CV.');
+    } finally {
+      setDownloadingVersionId('');
+      setDownloadingFormat(null);
+    }
+  }
+
   async function exportToPdf() {
     if (!activeChat) return;
     const target = document.getElementById('cv-editor-export');
@@ -262,7 +313,15 @@ export default function ChatPage() {
     <>
       {activeChat ? (
         <>
-          <ChatConversationPanel activeChat={activeChat} messagesViewport={messagesViewport} />
+          <ChatConversationPanel
+            activeChat={activeChat}
+            messagesViewport={messagesViewport}
+            onRewrite={() => void rewriteCurrentCv()}
+            onDownloadGenerated={(versionId, format) => void downloadGeneratedVersion(versionId, format)}
+            rewriting={rewritingChat}
+            downloadingVersionId={downloadingVersionId}
+            downloadingFormat={downloadingFormat ?? undefined}
+          />
           <div className="fixed inset-x-0 bottom-0 z-20 px-4 py-3 md:left-64">
             <div className="mx-auto max-w-4xl rounded-[20px] border border-[#e8eaf4] bg-[#f9faff] p-3">
             <ChatComposer
