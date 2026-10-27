@@ -30,7 +30,6 @@ type SidebarProps = {
   setMenuOpen: (open: boolean) => void;
   chatList: ChatSession[];
   activeChatId: string | null;
-  setActiveChatId: (id: string | null) => void;
   chatLoading: boolean;
   onNewChat: () => void;
   onSelectChat: (id: string) => void;
@@ -48,7 +47,6 @@ export default function Sidebar({
   setMenuOpen,
   chatList,
   activeChatId,
-  setActiveChatId,
   chatLoading,
   onNewChat,
   onSelectChat,

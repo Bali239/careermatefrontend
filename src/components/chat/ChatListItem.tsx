@@ -25,7 +25,7 @@ export default function ChatListItem({
 
   return (
     <div
-      className="group relative flex min-w-0 items-center rounded-lg transition-colors"
+      className={`group relative flex min-w-0 items-center rounded-lg transition-colors ${isSelected ? 'bg-[#f0edff]' : 'hover:bg-[#f5f4fa]'}`}
       key={chat.id}
     >
       {editing ? (
@@ -53,7 +53,7 @@ export default function ChatListItem({
             onClick={() => onSelect(chat.id)}
             aria-current={isSelected ? 'page' : undefined}
             title={chat.title}
-            className="min-w-0 flex-1 overflow-hidden py-2 pl-3 pr-8 text-left text-xs font-medium focus:outline-none"
+            className={`min-w-0 flex-1 overflow-hidden py-2 pl-3 pr-8 text-left text-xs font-medium focus:outline-none ${isSelected ? 'text-[#5140b5]' : 'text-[#333548]'}`}
           >
             <span className="block truncate">{chat.title}</span>
           </button>

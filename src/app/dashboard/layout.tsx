@@ -17,9 +17,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { user, ready, signOut } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [chatList, setChatList] = useState<ChatSession[]>([]);
-  const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [chatLoading, setChatLoading] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const routeChatId = pathname.match(/^\/dashboard\/chat\/([^/]+)$/)?.[1] ?? null;
+
+  const selectChat = (id: string | null) => {
+    const nextPath = id ? `/dashboard/chat/${encodeURIComponent(id)}` : '/dashboard/chat';
+    if (pathname !== nextPath) router.push(nextPath);
+  };
 
   useEffect(() => {
     if (ready && !user) {
@@ -38,7 +43,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         if (cancelled) return;
         const chats = response.data.data;
         setChatList(chats);
-        setActiveChatId((current) => current ?? chats[0]?.id ?? null);
       })
       .catch(() => {
         if (!cancelled) toast.error('Could not load your chat history.');
@@ -50,15 +54,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return () => {
       cancelled = true;
     };
-  }, [pathname]);
+  }, [pathname, routeChatId]);
 
-  const handleNewChat = () => setActiveChatId(null);
+  const handleNewChat = () => selectChat(null);
 
   const handleDeleteChat = async (id: string) => {
     try {
       await api.delete(`/chat/${id}`);
       setChatList((prev) => prev.filter((c) => c.id !== id));
-      if (activeChatId === id) setActiveChatId(null);
+      if (routeChatId === id) selectChat(null);
     } catch {
       toast.error('Could not delete chat.');
     }
@@ -95,7 +99,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <ChatNavigationProvider
-      value={{ chatList, setChatList, activeChatId, setActiveChatId, chatLoading }}
+      value={{ chatList, setChatList, activeChatId: routeChatId, selectChat, chatLoading }}
     >
       <div className="flex h-dvh min-h-0 overflow-hidden bg-[#f7f8fc] text-[#20243b]">
         {menuOpen && (
@@ -110,11 +114,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           menuOpen={menuOpen}
           setMenuOpen={setMenuOpen}
           chatList={chatList}
-          activeChatId={activeChatId}
-          setActiveChatId={setActiveChatId}
+          activeChatId={routeChatId}
           chatLoading={chatLoading}
           onNewChat={handleNewChat}
-          onSelectChat={setActiveChatId}
+          onSelectChat={(id) => selectChat(id)}
           onRename={handleRenameChat}
           onDelete={(chat) => handleDeleteChat(chat.id)}
           chatToDelete={null}

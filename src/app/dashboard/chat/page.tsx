@@ -38,7 +38,7 @@ export default function ChatPage() {
   const [loadingCVs, setLoadingCVs] = useState(true);
   const [creatingChat, setCreatingChat] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
-  const { chatList, setChatList, activeChatId, setActiveChatId } = useChatNavigation();
+  const { chatList, setChatList, activeChatId, selectChat } = useChatNavigation();
   const [messageDraft, setMessageDraft] = useState('');
   const [editorHtml, setEditorHtml] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
@@ -152,7 +152,7 @@ export default function ChatPage() {
         title: `Role fit: ${description.slice(0, 48)}`,
       });
       setChatList((items) => [created, ...items]);
-      setActiveChatId(created.id);
+      selectChat(created.id);
       setMessageDraft('');
       toast.success('Your CV and job description are being analyzed.');
     } catch (reason: unknown) {
@@ -172,7 +172,7 @@ export default function ChatPage() {
     try {
       const updated = await chatService.sendMessage(activeChat.id, text);
       setChatList((items) => items.map((chat) => (chat.id === activeChat.id ? updated : chat)));
-      setActiveChatId(updated.id);
+      selectChat(updated.id);
     } catch (reason: unknown) {
       const responseMessage = (reason as { response?: { data?: { message?: string } } })?.response
         ?.data?.message;
@@ -188,7 +188,7 @@ export default function ChatPage() {
     try {
       const updated = await chatService.editDraft(activeChat.id, editorHtml || '', true);
       setChatList((items) => items.map((chat) => (chat.id === activeChat.id ? updated : chat)));
-      setActiveChatId(updated.id);
+      selectChat(updated.id);
       toast.success('Draft saved.');
     } catch (reason: unknown) {
       const responseMessage = (reason as { response?: { data?: { message?: string } } })?.response
@@ -204,7 +204,7 @@ export default function ChatPage() {
     try {
       const updated = await chatService.exitEditMode(activeChat.id);
       setChatList((items) => items.map((chat) => (chat.id === activeChat.id ? updated : chat)));
-      setActiveChatId(updated.id);
+      selectChat(updated.id);
       toast.success('Chat unlocked. You can continue talking.');
     } catch (reason: unknown) {
       const responseMessage = (reason as { response?: { data?: { message?: string } } })?.response
@@ -223,7 +223,7 @@ export default function ChatPage() {
     try {
       const updated = await chatService.rewrite(activeChat.id);
       setChatList((items) => items.map((chat) => (chat.id === activeChat.id ? updated : chat)));
-      setActiveChatId(updated.id);
+      selectChat(updated.id);
       toast.success('A tailored CV version is being generated for download.');
     } catch (reason: unknown) {
       const responseMessage = (reason as { response?: { data?: { message?: string } } })?.response

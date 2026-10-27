@@ -7,7 +7,7 @@ type ChatNavigationContextValue = {
   chatList: ChatSession[];
   setChatList: Dispatch<SetStateAction<ChatSession[]>>;
   activeChatId: string | null;
-  setActiveChatId: Dispatch<SetStateAction<string | null>>;
+  selectChat: (id: string | null) => void;
   chatLoading: boolean;
 };
 
