@@ -1,6 +1,6 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 import { MenuOutlined } from '@ant-design/icons';
 import { toast } from 'sonner';
@@ -9,17 +9,20 @@ import { useAuth } from '@/components/auth/AuthProvider';
 import { ChatNavigationProvider } from './ChatNavigationContext';
 import type { ChatSession } from './models';
 import Sidebar from '@/components/layout/Sidebar';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { user, ready } = useAuth();
+  const router = useRouter();
+  const { user, ready, signOut } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [chatList, setChatList] = useState<ChatSession[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [chatLoading, setChatLoading] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
 
   useEffect(() => {
-    if (!ready || !user || !pathname.startsWith('/dashboard/chat')) return;
+    if (!pathname.startsWith('/dashboard/chat')) return;
 
     let cancelled = false;
     setChatLoading(true);
@@ -41,7 +44,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return () => {
       cancelled = true;
     };
-  }, [pathname, ready, user]);
+  }, [pathname]);
 
   const handleNewChat = () => setActiveChatId(null);
 
@@ -63,6 +66,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       toast.error('Could not rename chat.');
     }
   };
+
+  const handleLogout = async () => {
+    await signOut();
+    router.replace('/auth/login');
+  };
+
+  if (!ready) {
+    return (
+      <main className="flex min-h-[50vh] items-center justify-center text-sm text-slate-500" aria-live="polite">
+        Checking your session…
+      </main>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <ChatNavigationProvider
@@ -92,6 +112,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           setChatToDelete={() => {}}
           deletingChat={false}
           handleDeleteChat={handleDeleteChat}
+          setLogoutOpen={setLogoutOpen}
         />
         <div className="ml-0 flex h-dvh min-w-0 w-full flex-col md:ml-64 md:w-[calc(100%-16rem)]">
           <header className="z-10 flex h-[60px] shrink-0 items-center gap-2.5 border-b border-[#ececf4] bg-white px-[18px] text-sm font-extrabold text-[#252944] md:hidden">
@@ -116,6 +137,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {children}
           </main>
         </div>
+        <ConfirmModal
+          open={logoutOpen}
+          title="Logout?"
+          description="Are you sure you want to logout?"
+          confirmLabel="Logout"
+          destructive
+          loading={false}
+          onCancel={() => setLogoutOpen(false)}
+          onConfirm={handleLogout}
+        />
       </div>
     </ChatNavigationProvider>
   );

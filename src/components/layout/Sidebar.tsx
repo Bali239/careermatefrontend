@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Dropdown, Input } from 'antd';
 import {
   FileTextOutlined,
@@ -10,11 +11,13 @@ import {
   MessageOutlined,
   PlusOutlined,
   UserOutlined,
+  LogoutOutlined,
 } from '@ant-design/icons';
-import { DeleteOutlined, EditOutlined, MoreOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import ChatListItem from '@/components/chat/ChatListItem';
 import type { ChatSession } from '@/app/dashboard/models';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 const navItems = [
   { href: '/dashboard/profile', label: 'Profile', icon: UserOutlined },
@@ -37,6 +40,7 @@ type SidebarProps = {
   setChatToDelete: (chat: ChatSession | null) => void;
   deletingChat: boolean;
   handleDeleteChat: (id: string) => void;
+  setLogoutOpen: (open: boolean) => void;
 };
 
 export default function Sidebar({
@@ -54,9 +58,12 @@ export default function Sidebar({
   setChatToDelete,
   deletingChat,
   handleDeleteChat,
+  setLogoutOpen,
 }: SidebarProps) {
   const pathname = usePathname();
   const previousPath = useRef(pathname);
+  const { user } = useAuth();
+  const [avatarFailed, setAvatarFailed] = React.useState(false);
 
   useEffect(() => {
     if (previousPath.current !== pathname) {
@@ -76,6 +83,10 @@ export default function Sidebar({
 
   const handleRename = (id: string, title: string) => {
     onRename(id, title);
+  };
+
+  const onProfileMenuClick = ({ key }: { key: React.Key }) => {
+    if (key === 'logout') setLogoutOpen(true);
   };
 
   return (
@@ -153,9 +164,42 @@ export default function Sidebar({
         })}
       </nav>
 
-      <div className="mt-auto flex items-center gap-[9px] border-t border-[#f0eff6] px-[4px] pb-[3px] pt-[15px] text-[10px] text-[#9094a8]">
-        <span className="size-[7px] rounded-full bg-[#62bf91] shadow-[0_0_0_3px_#e8f8f0]" />
-        <span>Workspace ready</span>
+      <div className="mt-auto px-[4px] pb-[8px]">
+        {user && (
+          <Dropdown
+            trigger={['click']}
+            menu={{
+              items: [{ key: 'logout', label: 'Logout', icon: <LogoutOutlined /> }],
+              selectable: false,
+              onClick: onProfileMenuClick,
+            }}
+          >
+            <button
+              type="button"
+              className="flex w-full min-w-0 items-center gap-2 rounded-lg px-2 py-2 text-left text-xs transition-colors hover:bg-[#f8f7ff]"
+            >
+              {user.avatarUrl && !avatarFailed ? (
+                <Image
+                  src={user.avatarUrl}
+                  alt="avatar"
+                  className="size-7 shrink-0 rounded-full"
+                  width={28}
+                  height={28}
+                  onError={() => setAvatarFailed(true)}
+                  priority
+                />
+              ) : (
+                <span className="size-7 shrink-0 flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#8d7cf0] to-[#6352ce] text-[10px] font-bold text-white">
+                  {user.name?.charAt(0).toUpperCase() ?? user.email?.charAt(0).toUpperCase() ?? 'U'}
+                </span>
+              )}
+              <div className="min-w-0 flex-1 overflow-hidden">
+                <div className="truncate font-semibold text-[#252944]">{user.name ?? 'User'}</div>
+                <div className="truncate text-[9px] text-[#9094a8]">{user.email ?? ''}</div>
+              </div>
+            </button>
+          </Dropdown>
+        )}
       </div>
 
       <ConfirmModal
