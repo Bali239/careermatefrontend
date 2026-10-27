@@ -694,21 +694,7 @@ export default function ProfilePage() {
           </Button>
         </div>
       </form>
-      <div className="rounded-2xl border border-indigo-100 bg-indigo-50 p-4">
-        <div className="flex items-start gap-3">
-          <FileAddOutlined className="mt-1 text-indigo-600" />
-          <div>
-            <p className="font-semibold text-indigo-950">CV extraction works automatically</p>
-            <p className="mt-1 text-sm leading-6 text-indigo-800">
-              When you upload a PDF or Word CV in your CV library, the AI reads it and fills missing
-              profile details. You can review and edit everything here.{' '}
-              <a className="font-semibold underline" href="/dashboard/cv">
-                Go to your CV library
-              </a>
-            </p>
-          </div>
-        </div>
-      </div>
+      
       <ConfirmModal
         open={confirmClear}
         title="Clear your profile?"
