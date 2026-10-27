@@ -5,19 +5,13 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 're
 import { Document, Packer, Paragraph, TextRun } from 'docx'
 import { jsPDF } from 'jspdf'
 import html2canvas from 'html2canvas'
-import { Button, Card, Empty, Tag, Typography } from 'antd'
-import {
-  FolderOpenOutlined,
-  MessageOutlined,
-  RobotOutlined,
-  UploadOutlined,
-  UserOutlined,
-} from '@ant-design/icons'
 import { toast } from 'sonner'
-import { api } from '@/lib/axios'
+import { chatService } from '@/lib/services/chat.service'
+import { cvService } from '@/lib/services/cv.service'
 import { useChatNavigation } from '../ChatNavigationContext'
 import type { CV, ChatSession } from '../models'
 import ChatComposer from './ChatComposer'
+import ChatConversationPanel from './ChatConversationPanel'
 import CvSelectionModal from './CvSelectionModal'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
@@ -58,8 +52,7 @@ export default function ChatPage() {
   const loadCVs = useCallback(async () => {
     setLoadingCVs(true)
     try {
-      const response = await api.get<{ data: CV[] }>('/cvs')
-      const nextCvs = response.data.data
+      const nextCvs = await cvService.list()
       setCvs(nextCvs)
       if (!selectedCvId && nextCvs[0]) setSelectedCvId(nextCvs[0].id)
       if (selectedCvId && !nextCvs.some((cv) => cv.id === selectedCvId)) setSelectedCvId(nextCvs[0]?.id ?? '')
@@ -116,14 +109,7 @@ export default function ChatPage() {
     setUploadingCv(true)
     setUploadError('')
     try {
-      await api.post('/cvs', uploadedFile, {
-        headers: {
-          'Content-Type': uploadedFile.type || (uploadedFile.name.toLowerCase().endsWith('.pdf') ? 'application/pdf' : uploadedFile.name.toLowerCase().endsWith('.docx') ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'application/msword'),
-          'X-File-Name': encodeURIComponent(uploadedFile.name),
-          'X-CV-Name': encodeURIComponent(uploadName.trim()),
-        },
-        timeout: 60_000,
-      })
+      await cvService.upload(uploadedFile!, uploadName.trim())
       toast.success('Your CV was uploaded and saved in the CV library.')
       setUploadedFile(null)
       setUploadName('')
@@ -149,38 +135,14 @@ export default function ChatPage() {
 
     setCreatingChat(true)
     try {
-      const response = await api.post<{ data: ChatSession }>('/chat', {
-        cvId: selectedCvId,
-        jobDescription: jobDescription.trim(),
-        title: `Role fit: ${jobDescription.trim().slice(0, 48)}`,
-      })
-      setChatList((items) => [response.data.data, ...items])
-      setActiveChatId(response.data.data.id)
+      const created = await chatService.create({ cvId: selectedCvId, jobDescription: jobDescription.trim(), title: `Role fit: ${jobDescription.trim().slice(0, 48)}` })
+      setChatList((items) => [created, ...items])
+      setActiveChatId(created.id)
       setMessageDraft('')
       toast.success('Your CV and job description are being analyzed.')
     } catch (reason: unknown) {
       const responseMessage = (reason as { response?: { data?: { message?: string } } })?.response?.data?.message
       toast.error(responseMessage ?? 'Could not analyze this CV for the job description.')
-    } finally {
-      setCreatingChat(false)
-    }
-  }
-
-  async function reAnalyzeCurrentChat() {
-    if (!activeChat) return
-    setCreatingChat(true)
-    try {
-      const response = await api.post<{ data: ChatSession }>('/chat', {
-        cvId: activeChat.cvId,
-        jobDescription: activeChat.jobDescription,
-        title: activeChat.title,
-      })
-      setChatList((items) => [response.data.data, ...items.filter((chat) => chat.id !== activeChat.id)])
-      setActiveChatId(response.data.data.id)
-      toast.success('A refreshed ATS analysis has been generated.')
-    } catch (reason: unknown) {
-      const responseMessage = (reason as { response?: { data?: { message?: string } } })?.response?.data?.message
-      toast.error(responseMessage ?? 'Could not refresh the ATS analysis.')
     } finally {
       setCreatingChat(false)
     }
@@ -192,9 +154,9 @@ export default function ChatPage() {
     setMessageDraft('')
     setSendingMessage(true)
     try {
-      const response = await api.post<{ data: ChatSession }>('/chat/' + activeChat.id + '/messages', { message: text })
-      setChatList((items) => items.map((chat) => chat.id === activeChat.id ? response.data.data : chat))
-      setActiveChatId(response.data.data.id)
+      const updated = await chatService.sendMessage(activeChat.id, text)
+      setChatList((items) => items.map((chat) => chat.id === activeChat.id ? updated : chat))
+      setActiveChatId(updated.id)
     } catch (reason: unknown) {
       const responseMessage = (reason as { response?: { data?: { message?: string } } })?.response?.data?.message
       toast.error(responseMessage ?? 'Could not send your message.')
@@ -207,9 +169,9 @@ export default function ChatPage() {
     if (!activeChat) return
     setSavingEdit(true)
     try {
-      const response = await api.post<{ data: ChatSession }>('/chat/' + activeChat.id + '/edit', { draftHtml: editorHtml || '', isEditing: true })
-      setChatList((items) => items.map((chat) => chat.id === activeChat.id ? response.data.data : chat))
-      setActiveChatId(response.data.data.id)
+      const updated = await chatService.editDraft(activeChat.id, editorHtml || '', true)
+      setChatList((items) => items.map((chat) => chat.id === activeChat.id ? updated : chat))
+      setActiveChatId(updated.id)
       toast.success('Draft saved.')
     } catch (reason: unknown) {
       const responseMessage = (reason as { response?: { data?: { message?: string } } })?.response?.data?.message
@@ -222,9 +184,9 @@ export default function ChatPage() {
   async function exitEditMode() {
     if (!activeChat) return
     try {
-      const response = await api.post<{ data: ChatSession }>('/chat/' + activeChat.id + '/exit-edit')
-      setChatList((items) => items.map((chat) => chat.id === activeChat.id ? response.data.data : chat))
-      setActiveChatId(response.data.data.id)
+      const updated = await chatService.exitEditMode(activeChat.id)
+      setChatList((items) => items.map((chat) => chat.id === activeChat.id ? updated : chat))
+      setActiveChatId(updated.id)
       toast.success('Chat unlocked. You can continue talking.')
     } catch (reason: unknown) {
       const responseMessage = (reason as { response?: { data?: { message?: string } } })?.response?.data?.message
@@ -278,12 +240,13 @@ export default function ChatPage() {
 
   return (
     <>
-      <div className="flex h-full min-h-0 flex-col bg-white">
-        
-      </div>
+      <ChatConversationPanel
+        activeChat={activeChat}
+        messagesViewport={messagesViewport}
+      />
 
       <div className="fixed inset-x-0 bottom-0 z-20 px-4 py-3 md:left-64">
-        <div className="mx-auto max-w-4xl p-3">
+        <div className="mx-auto max-w-4xl rounded-[20px] border border-[#e8eaf4] bg-[#f9faff] p-3">
           {activeChat ? (
             <ChatComposer
               mode="message"
