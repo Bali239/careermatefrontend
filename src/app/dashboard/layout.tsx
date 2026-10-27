@@ -22,6 +22,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [logoutOpen, setLogoutOpen] = useState(false);
 
   useEffect(() => {
+    if (ready && !user) {
+      router.replace('/auth/login');
+    }
+  }, [ready, user, router]);
+
+  useEffect(() => {
     if (!pathname.startsWith('/dashboard/chat')) return;
 
     let cancelled = false;
@@ -74,7 +80,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (!ready) {
     return (
-      <main className="flex min-h-[50vh] items-center justify-center text-sm text-slate-500" aria-live="polite">
+      <main
+        className="flex min-h-[50vh] items-center justify-center text-sm text-slate-500"
+        aria-live="polite"
+      >
         Checking your session…
       </main>
     );
