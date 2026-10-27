@@ -1,7 +1,24 @@
-"use client";
+'use client';
 
-import { createContext, PropsWithChildren, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { api, AuthSession, AuthUser, clearAuthSession, getRefreshToken, requestAuthSession, restoreAuthSession, saveAuthSession } from "@/lib/axios";
+import {
+  createContext,
+  PropsWithChildren,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+import {
+  api,
+  AuthSession,
+  AuthUser,
+  clearAuthSession,
+  getRefreshToken,
+  requestAuthSession,
+  restoreAuthSession,
+  saveAuthSession,
+} from '@/lib/axios';
 
 type AuthContextValue = {
   user: AuthUser | null;
@@ -21,12 +38,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
     let mounted = true;
     restoreAuthSession()
       .then(async () => {
-        const response = await api.get<{ data: { user: AuthUser } }>("/auth/me");
+        const response = await api.get<{ data: { user: AuthUser } }>('/auth/me');
         if (mounted) setUser(response.data.data.user);
       })
       .catch(() => clearAuthSession())
-      .finally(() => { if (mounted) setReady(true); });
-    return () => { mounted = false; };
+      .finally(() => {
+        if (mounted) setReady(true);
+      });
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const acceptSession = useCallback((session: AuthSession) => {
@@ -42,19 +63,22 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const signOut = useCallback(async () => {
     const refreshToken = getRefreshToken();
     try {
-      if (refreshToken) await api.post("/auth/logout", { refreshToken });
+      if (refreshToken) await api.post('/auth/logout', { refreshToken });
     } finally {
       clearAuthSession();
       setUser(null);
     }
   }, []);
 
-  const value = useMemo(() => ({ user, ready, acceptSession, signIn, signOut }), [user, ready, acceptSession, signIn, signOut]);
+  const value = useMemo(
+    () => ({ user, ready, acceptSession, signIn, signOut }),
+    [user, ready, acceptSession, signIn, signOut]
+  );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
   const value = useContext(AuthContext);
-  if (!value) throw new Error("useAuth must be used inside AuthProvider");
+  if (!value) throw new Error('useAuth must be used inside AuthProvider');
   return value;
 }

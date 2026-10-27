@@ -1,44 +1,44 @@
-'use client'
+'use client';
 
-import { EditOutlined, FolderOpenOutlined, SendOutlined } from '@ant-design/icons'
-import { Button, Input, Tag, Tooltip } from 'antd'
+import { EditOutlined, FolderOpenOutlined, SendOutlined } from '@ant-design/icons';
+import { Button, Input, Tag, Tooltip } from 'antd';
 
 type SharedComposerProps = {
-  value: string
-  onChange: (value: string) => void
-  submitting: boolean
-  onSubmit: () => void
-}
+  value: string;
+  onChange: (value: string) => void;
+  submitting: boolean;
+  onSubmit: () => void;
+};
 
 type AnalysisComposerProps = SharedComposerProps & {
-  mode: 'analysis'
-  selectedCvLabel: string | null
-  onSelectCv: () => void
-}
+  mode: 'analysis';
+  selectedCvLabel: string | null;
+  onSelectCv: () => void;
+};
 
 type MessageComposerProps = SharedComposerProps & {
-  mode: 'message'
-  selectedCvLabel: string
-  disabled: boolean
-  onEditDraft: () => void
-}
+  mode: 'message';
+  selectedCvLabel: string;
+  disabled: boolean;
+  onEditDraft: () => void;
+};
 
-type ChatComposerProps = AnalysisComposerProps | MessageComposerProps
+type ChatComposerProps = AnalysisComposerProps | MessageComposerProps;
 
 export default function ChatComposer(props: ChatComposerProps) {
-  const isMessageMode = props.mode === 'message'
-  const disabled = props.submitting || (isMessageMode ? props.disabled : !props.selectedCvLabel)
-  const canSubmit = props.value.trim().length > 0 && !disabled
+  const isMessageMode = props.mode === 'message';
+  const disabled = props.submitting || (isMessageMode ? props.disabled : !props.selectedCvLabel);
+  const canSubmit = props.value.trim().length > 0 && !disabled;
 
   const submit = () => {
-    if (canSubmit) props.onSubmit()
-  }
+    if (canSubmit) props.onSubmit();
+  };
 
   return (
     <form
       onSubmit={(event) => {
-        event.preventDefault()
-        submit()
+        event.preventDefault();
+        submit();
       }}
       className="flex min-w-0 items-center gap-2 rounded-[20px] border  bg-white px-3 py-1.5 shadow-[0_2px_8px_rgba(31,35,51,0.03)] transition-colors focus-within:border-[#b9b0f3]"
     >
@@ -48,13 +48,19 @@ export default function ChatComposer(props: ChatComposerProps) {
           onChange={(event) => props.onChange(event.target.value)}
           onPressEnter={(event) => {
             if (isMessageMode && !event.shiftKey) {
-              event.preventDefault()
-              submit()
+              event.preventDefault();
+              submit();
             }
           }}
           autoSize={{ minRows: 1, maxRows: isMessageMode ? 4 : 6 }}
           disabled={disabled}
-          placeholder={isMessageMode ? (props.disabled ? 'Exit edit mode to continue' : 'Message CareerMate...') : 'Paste job description...'}
+          placeholder={
+            isMessageMode
+              ? props.disabled
+                ? 'Exit edit mode to continue'
+                : 'Message CareerMate...'
+              : 'Paste job description...'
+          }
           aria-label={isMessageMode ? 'Chat message' : 'Job description'}
           className="!my-0.5 !resize-none !rounded-none !border-0 !bg-transparent !px-0 !py-1 !shadow-none focus:!shadow-none"
         />
@@ -62,8 +68,16 @@ export default function ChatComposer(props: ChatComposerProps) {
         <div className="flex shrink-0 items-center gap-1.5">
           {isMessageMode ? (
             <>
-              <Tag color="geekblue" className="!m-0 max-w-[140px] truncate">{props.selectedCvLabel}</Tag>
-              <Button type="text" size="small" icon={<EditOutlined />} onClick={props.onEditDraft} className="!h-7 !px-1.5 text-xs">
+              <Tag color="geekblue" className="!m-0 max-w-[140px] truncate">
+                {props.selectedCvLabel}
+              </Tag>
+              <Button
+                type="text"
+                size="small"
+                icon={<EditOutlined />}
+                onClick={props.onEditDraft}
+                className="!h-7 !px-1.5 text-xs"
+              >
                 Edit
               </Button>
             </>
@@ -84,7 +98,9 @@ export default function ChatComposer(props: ChatComposerProps) {
                 {props.selectedCvLabel ?? 'Select CV'}
               </span>
               {props.value.trim().length > 0 && (
-                <span className="hidden text-[10px] text-[#9094a8] sm:inline">{props.value.trim().length}c</span>
+                <span className="hidden text-[10px] text-[#9094a8] sm:inline">
+                  {props.value.trim().length}c
+                </span>
               )}
             </>
           )}
@@ -105,5 +121,5 @@ export default function ChatComposer(props: ChatComposerProps) {
         />
       </Tooltip>
     </form>
-  )
+  );
 }

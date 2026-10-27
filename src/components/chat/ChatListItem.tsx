@@ -1,24 +1,33 @@
-'use client'
+'use client';
 
-import { Dropdown, Input } from 'antd'
-import { DeleteOutlined, EditOutlined, MoreOutlined } from '@ant-design/icons'
-import { useState } from 'react'
-import type { ChatSession } from '@/app/dashboard/models'
+import { Dropdown, Input } from 'antd';
+import { DeleteOutlined, EditOutlined, MoreOutlined } from '@ant-design/icons';
+import { useState } from 'react';
+import type { ChatSession } from '@/app/dashboard/models';
 
 type ChatListItemProps = {
-  chat: ChatSession
-  isSelected: boolean
-  onSelect: (id: string) => void
-  onRename: (id: string, title: string) => void
-  onDelete: (chat: ChatSession) => void
-}
+  chat: ChatSession;
+  isSelected: boolean;
+  onSelect: (id: string) => void;
+  onRename: (id: string, title: string) => void;
+  onDelete: (chat: ChatSession) => void;
+};
 
-export default function ChatListItem({ chat, isSelected, onSelect, onRename, onDelete }: ChatListItemProps) {
-  const [editing, setEditing] = useState(false)
-  const [editTitle, setEditTitle] = useState(chat.title)
+export default function ChatListItem({
+  chat,
+  isSelected,
+  onSelect,
+  onRename,
+  onDelete,
+}: ChatListItemProps) {
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(chat.title);
 
   return (
-    <div className="group relative flex min-w-0 items-center rounded-lg transition-colors" key={chat.id}>
+    <div
+      className="group relative flex min-w-0 items-center rounded-lg transition-colors"
+      key={chat.id}
+    >
       {editing ? (
         <div className="p-1 w-full">
           <Input
@@ -26,12 +35,12 @@ export default function ChatListItem({ chat, isSelected, onSelect, onRename, onD
             value={editTitle}
             onChange={(e) => setEditTitle(e.target.value)}
             onPressEnter={() => {
-              onRename(chat.id, editTitle)
-              setEditing(false)
+              onRename(chat.id, editTitle);
+              setEditing(false);
             }}
             onBlur={() => {
-              onRename(chat.id, editTitle)
-              setEditing(false)
+              onRename(chat.id, editTitle);
+              setEditing(false);
             }}
             autoFocus
             className="w-full text-xs"
@@ -55,8 +64,22 @@ export default function ChatListItem({ chat, isSelected, onSelect, onRename, onD
               placement="bottomRight"
               menu={{
                 items: [
-                  { key: 'rename', icon: <EditOutlined />, label: 'Rename', onClick: () => { setEditTitle(chat.title); setEditing(true) } },
-                  { key: 'delete', icon: <DeleteOutlined />, label: 'Delete', danger: true, onClick: () => onDelete(chat) },
+                  {
+                    key: 'rename',
+                    icon: <EditOutlined />,
+                    label: 'Rename',
+                    onClick: () => {
+                      setEditTitle(chat.title);
+                      setEditing(true);
+                    },
+                  },
+                  {
+                    key: 'delete',
+                    icon: <DeleteOutlined />,
+                    label: 'Delete',
+                    danger: true,
+                    onClick: () => onDelete(chat),
+                  },
                 ],
               }}
             >
@@ -73,5 +96,5 @@ export default function ChatListItem({ chat, isSelected, onSelect, onRename, onD
         </>
       )}
     </div>
-  )
+  );
 }

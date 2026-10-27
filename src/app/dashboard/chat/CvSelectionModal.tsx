@@ -1,25 +1,25 @@
-'use client'
+'use client';
 
-import type { FormEventHandler } from 'react'
-import { Button, Input, Modal, Tag } from 'antd'
-import { UploadOutlined } from '@ant-design/icons'
-import type { CV } from '../models'
+import type { FormEventHandler } from 'react';
+import { Button, Input, Modal, Tag } from 'antd';
+import { UploadOutlined } from '@ant-design/icons';
+import type { CV } from '../models';
 
 type CvSelectionModalProps = {
-  open: boolean
-  onClose: () => void
-  cvs: CV[]
-  selectedCvId: string
-  onSelectCv: (id: string) => void
-  uploadName: string
-  onUploadNameChange: (value: string) => void
-  uploadedFile: File | null
-  onChooseFile: (file: File | null) => void
-  fileInputRef: { current: HTMLInputElement | null }
-  onUpload: FormEventHandler<HTMLFormElement>
-  uploadingCv: boolean
-  uploadError: string
-}
+  open: boolean;
+  onClose: () => void;
+  cvs: CV[];
+  selectedCvId: string;
+  onSelectCv: (id: string) => void;
+  uploadName: string;
+  onUploadNameChange: (value: string) => void;
+  uploadedFile: File | null;
+  onChooseFile: (file: File | null) => void;
+  fileInputRef: { current: HTMLInputElement | null };
+  onUpload: FormEventHandler<HTMLFormElement>;
+  uploadingCv: boolean;
+  uploadError: string;
+};
 
 export default function CvSelectionModal({
   open,
@@ -48,7 +48,9 @@ export default function CvSelectionModal({
         <div>
           <div className="mb-3 text-sm font-semibold text-[#2c3147]">Saved CVs</div>
           {cvs.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-[#e5e7ef] bg-[#f8f9ff] p-4 text-sm text-[#6a7289]">No CV files yet.</div>
+            <div className="rounded-xl border border-dashed border-[#e5e7ef] bg-[#f8f9ff] p-4 text-sm text-[#6a7289]">
+              No CV files yet.
+            </div>
           ) : (
             <div className="space-y-2">
               {cvs.map((cv) => (
@@ -56,8 +58,8 @@ export default function CvSelectionModal({
                   key={cv.id}
                   type="button"
                   onClick={() => {
-                    onSelectCv(cv.id)
-                    onClose()
+                    onSelectCv(cv.id);
+                    onClose();
                   }}
                   className={`flex w-full items-center justify-between rounded-2xl border px-3 py-3 text-left ${selectedCvId === cv.id ? 'border-[#cfc8ff] bg-[#f1efff]' : 'border-[#eef0f5] bg-white hover:border-[#dfe3ff]'}`}
                 >
@@ -72,11 +74,23 @@ export default function CvSelectionModal({
           )}
         </div>
 
-        <form onSubmit={onUpload} className="rounded-[20px] border border-dashed border-[#dfe3ff] bg-[#f8f9ff] p-4">
+        <form
+          onSubmit={onUpload}
+          className="rounded-[20px] border border-dashed border-[#dfe3ff] bg-[#f8f9ff] p-4"
+        >
           <div className="mb-3 text-sm font-semibold text-[#2c3147]">Upload a new CV</div>
           <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <Input value={uploadName} onChange={(event) => onUploadNameChange(event.target.value)} placeholder="CV name" />
-            <Button type="default" icon={<UploadOutlined />} block onClick={() => fileInputRef.current?.click()}>
+            <Input
+              value={uploadName}
+              onChange={(event) => onUploadNameChange(event.target.value)}
+              placeholder="CV name"
+            />
+            <Button
+              type="default"
+              icon={<UploadOutlined />}
+              block
+              onClick={() => fileInputRef.current?.click()}
+            >
               {uploadedFile?.name ?? 'Choose PDF / DOC / DOCX'}
             </Button>
             <input
@@ -94,5 +108,5 @@ export default function CvSelectionModal({
         </form>
       </div>
     </Modal>
-  )
+  );
 }

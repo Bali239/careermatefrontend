@@ -1,7 +1,7 @@
-'use client'
+'use client';
 
-import { Card, Typography } from 'antd'
-import { RobotOutlined } from '@ant-design/icons'
+import { Card, Typography } from 'antd';
+import { RobotOutlined } from '@ant-design/icons';
 
 export default function ChatEmpty() {
   return (
@@ -12,19 +12,29 @@ export default function ChatEmpty() {
             <RobotOutlined style={{ fontSize: 20 }} />
           </div>
           <div>
-            <Typography.Title level={4} className="!mb-0">Choose your CV and job description</Typography.Title>
-            <div className="text-sm text-[#6a7289]">Your insight will be tailored to the role you want to target.</div>
+            <Typography.Title level={4} className="!mb-0">
+              Choose your CV and job description
+            </Typography.Title>
+            <div className="text-sm text-[#6a7289]">
+              Your insight will be tailored to the role you want to target.
+            </div>
           </div>
         </div>
         <div className="grid gap-3 md:grid-cols-2">
-          <button type="button" className="flex min-h-[52px] w-full items-center justify-between gap-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-left hover:border-indigo-400 hover:bg-indigo-50/40">
+          <button
+            type="button"
+            className="flex min-h-[52px] w-full items-center justify-between gap-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-left hover:border-indigo-400 hover:bg-indigo-50/40"
+          >
             <span className="truncate text-sm text-slate-600">Select CV</span>
           </button>
-          <button type="button" className="flex min-h-[52px] w-full items-center justify-between gap-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-left hover:border-indigo-400 hover:bg-indigo-50/40">
+          <button
+            type="button"
+            className="flex min-h-[52px] w-full items-center justify-between gap-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-left hover:border-indigo-400 hover:bg-indigo-50/40"
+          >
             <span className="truncate text-sm text-slate-600">Upload CV</span>
           </button>
         </div>
       </div>
     </Card>
-  )
+  );
 }

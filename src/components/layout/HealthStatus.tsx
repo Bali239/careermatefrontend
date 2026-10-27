@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { useQuery } from "@tanstack/react-query";
-import { Alert, Button, Space, Tag } from "antd";
-import { api } from "@/lib/axios";
+import { useQuery } from '@tanstack/react-query';
+import { Alert, Button, Space, Tag } from 'antd';
+import { api } from '@/lib/axios';
 
 type HealthResponse = {
-  status: "ok";
+  status: 'ok';
   service: string;
   environment: string;
   timestamp: string;
@@ -13,9 +13,9 @@ type HealthResponse = {
 
 export default function HealthStatus() {
   const healthQuery = useQuery({
-    queryKey: ["api-health"],
+    queryKey: ['api-health'],
     queryFn: async () => {
-      const response = await api.get<HealthResponse>("health");
+      const response = await api.get<HealthResponse>('health');
       return response.data;
     },
   });
@@ -33,7 +33,11 @@ export default function HealthStatus() {
           showIcon
           title="The API could not be reached. Check the server and API URL."
           action={
-            <Button size="small" onClick={() => void healthQuery.refetch()} loading={healthQuery.isFetching}>
+            <Button
+              size="small"
+              onClick={() => void healthQuery.refetch()}
+              loading={healthQuery.isFetching}
+            >
               Retry
             </Button>
           }

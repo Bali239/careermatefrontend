@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   ArrowRightOutlined,
@@ -6,7 +6,7 @@ import {
   FileSearchOutlined,
   SafetyCertificateOutlined,
   StarOutlined,
-} from "@ant-design/icons";
+} from '@ant-design/icons';
 
 const iconByName = {
   arrow: ArrowRightOutlined,

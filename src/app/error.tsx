@@ -1,15 +1,8 @@
+'use client';
 
-"use client";
+import { useEffect } from 'react';
 
-import { useEffect } from "react";
-
-export default function Error({
-  error,
-  retry,
-}: {
-  error: unknown;
-  retry: () => void;
-}) {
+export default function Error({ error, retry }: { error: unknown; retry: () => void }) {
   useEffect(() => {
     console.error(error);
   }, [error]);
