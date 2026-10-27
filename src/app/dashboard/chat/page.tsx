@@ -239,20 +239,58 @@ export default function ChatPage() {
     setDownloadingVersionId(versionId);
     setDownloadingFormat(format);
     try {
-      const blob = await chatService.downloadGenerated(activeChat.id, versionId, format);
-      const url = URL.createObjectURL(blob);
       const version = activeChat.generatedCvVersions?.find((entry) => entry.id === versionId);
-      const downloadName =
-        format === 'pdf'
-          ? version?.pdfFileName || `${(activeChat.title || 'rewrite').replace(/\s+/g, '-').toLowerCase()}.pdf`
-          : version?.docxFileName || `${(activeChat.title || 'rewrite').replace(/\s+/g, '-').toLowerCase()}.docx`;
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = downloadName;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      const baseName = (activeChat.title || 'tailored-cv').replace(/[^a-z0-9_-]+/gi, '-').toLowerCase();
+      const downloadName = format === 'pdf'
+        ? version?.pdfFileName || `${baseName}.pdf`
+        : version?.docxFileName || `${baseName}.docx`;
+      const content = editorHtml || activeChat.draftHtml || activeChat.analysis?.editableHtml || '';
+
+      if (format === 'pdf') {
+        const printable = document.createElement('div');
+        printable.innerHTML = content;
+        Object.assign(printable.style, {
+          position: 'fixed',
+          left: '-10000px',
+          top: '0',
+          width: '794px',
+          padding: '36px',
+          background: '#ffffff',
+          color: '#111827',
+          fontFamily: 'Arial, Helvetica, sans-serif',
+          lineHeight: '1.5',
+        });
+        document.body.appendChild(printable);
+        const canvas = await html2canvas(printable, { scale: 2, backgroundColor: '#ffffff' });
+        printable.remove();
+
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const renderedHeight = (canvas.height * pageWidth) / canvas.width;
+        const pageCount = Math.ceil(renderedHeight / pageHeight);
+        const image = canvas.toDataURL('image/png');
+        for (let page = 0; page < pageCount; page += 1) {
+          if (page > 0) pdf.addPage();
+          pdf.addImage(image, 'PNG', 0, -page * pageHeight, pageWidth, renderedHeight);
+        }
+        pdf.save(downloadName);
+      } else {
+        const plainText = toPlainText(content);
+        const paragraphs = plainText
+          .split(/\n+/)
+          .map((line) => line.trim())
+          .filter(Boolean)
+          .map((line) => new Paragraph({ children: [new TextRun({ text: line })] }));
+        const blob = await Packer.toBlob(new Document({ sections: [{ children: paragraphs }] }));
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = downloadName;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+      }
+
       toast.success(`Downloaded the ${format.toUpperCase()} version.`);
     } catch (reason: unknown) {
       const responseMessage = (reason as { response?: { data?: { message?: string } } })?.response
