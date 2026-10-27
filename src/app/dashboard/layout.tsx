@@ -5,19 +5,21 @@ import React, { useEffect, useState } from 'react';
 import { MenuOutlined } from '@ant-design/icons';
 import { toast } from 'sonner';
 import { api } from '@/lib/axios';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { ChatNavigationProvider } from './ChatNavigationContext';
 import type { ChatSession } from './models';
 import Sidebar from '@/components/layout/Sidebar';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { user, ready } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [chatList, setChatList] = useState<ChatSession[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [chatLoading, setChatLoading] = useState(false);
 
   useEffect(() => {
-    if (!pathname.startsWith('/dashboard/chat')) return;
+    if (!ready || !user || !pathname.startsWith('/dashboard/chat')) return;
 
     let cancelled = false;
     setChatLoading(true);
@@ -39,7 +41,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return () => {
       cancelled = true;
     };
-  }, [pathname]);
+  }, [pathname, ready, user]);
 
   const handleNewChat = () => setActiveChatId(null);
 
