@@ -10,9 +10,9 @@ import { chatService } from '@/lib/services/chat.service';
 import { cvService } from '@/lib/services/cv.service';
 import { useChatNavigation } from '../ChatNavigationContext';
 import type { CV, ChatSession } from '../models';
+import NewAnalysisWorkspace from './NewAnalysisWorkspace';
 import ChatComposer from './ChatComposer';
 import ChatConversationPanel from './ChatConversationPanel';
-import CvSelectionModal from './CvSelectionModal';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPTED = [
@@ -46,7 +46,6 @@ export default function ChatPage() {
   const [uploadError, setUploadError] = useState('');
   const [uploadName, setUploadName] = useState('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [cvModalOpen, setCvModalOpen] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const messagesViewport = useRef<HTMLDivElement>(null);
 
@@ -66,7 +65,7 @@ export default function ChatPage() {
     } finally {
       setLoadingCVs(false);
     }
-  }, [selectedCvId]);
+  }, []);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -86,18 +85,24 @@ export default function ChatPage() {
 
   const chooseFile = (selected: File | null) => {
     setUploadError('');
-    if (!selected) return;
+    setUploadedFile(null);
+    if (!selected) {
+      setUploadName('');
+      return;
+    }
     const ext = selected.name.toLowerCase().split('.').pop();
     if (!ACCEPTED.includes(selected.type) && !['pdf', 'doc', 'docx'].includes(ext ?? '')) {
       setUploadError('Choose a PDF, DOC, or DOCX file.');
+      setUploadName('');
       return;
     }
     if (selected.size > MAX_FILE_SIZE) {
       setUploadError('CV files must be 10 MB or smaller.');
+      setUploadName('');
       return;
     }
     setUploadedFile(selected);
-    if (!uploadName.trim()) setUploadName(selected.name.replace(/\.[^.]+$/, ''));
+    setUploadName(selected.name.replace(/\.[^.]+$/, '').slice(0, 120));
   };
 
   async function uploadInlineCv(event: FormEvent<HTMLFormElement>) {
@@ -106,15 +111,13 @@ export default function ChatPage() {
       setUploadError('Select a PDF or Word document first.');
       return;
     }
-    if (!uploadName.trim()) {
-      setUploadError('Give this CV a name.');
-      return;
-    }
-
     setUploadingCv(true);
     setUploadError('');
     try {
-      await cvService.upload(uploadedFile!, uploadName.trim());
+      const cvName = uploadName.trim() || uploadedFile.name.replace(/\.[^.]+$/, '').slice(0, 120);
+      const createdCv = await cvService.upload(uploadedFile, cvName);
+      setCvs((items) => [createdCv, ...items.filter((cv) => cv.id !== createdCv.id)]);
+      setSelectedCvId(createdCv.id);
       toast.success('Your CV was uploaded and saved in the CV library.');
       setUploadedFile(null);
       setUploadName('');
@@ -130,11 +133,13 @@ export default function ChatPage() {
   }
 
   async function createNewChat() {
+    if (creatingChat) return;
     if (!selectedCvId) {
       toast.error('Select a CV before analyzing it.');
       return;
     }
-    if (!jobDescription.trim() || jobDescription.trim().length < 20) {
+    const description = jobDescription.trim();
+    if (description.length < 20 || description.length > 8000) {
       toast.error('Add a fuller job description before analyzing.');
       return;
     }
@@ -143,8 +148,8 @@ export default function ChatPage() {
     try {
       const created = await chatService.create({
         cvId: selectedCvId,
-        jobDescription: jobDescription.trim(),
-        title: `Role fit: ${jobDescription.trim().slice(0, 48)}`,
+        jobDescription: description,
+        title: `Role fit: ${description.slice(0, 48)}`,
       });
       setChatList((items) => [created, ...items]);
       setActiveChatId(created.id);
@@ -253,16 +258,13 @@ export default function ChatPage() {
     setTimeout(() => URL.revokeObjectURL(url), 5000);
   }
 
-  const openCvModal = () => setCvModalOpen(true);
-  const closeCvModal = () => setCvModalOpen(false);
-
   return (
     <>
-      <ChatConversationPanel activeChat={activeChat} messagesViewport={messagesViewport} />
-
-      <div className="fixed inset-x-0 bottom-0 z-20 px-4 py-3 md:left-64">
-        <div className="mx-auto max-w-4xl rounded-[20px] border border-[#e8eaf4] bg-[#f9faff] p-3">
-          {activeChat ? (
+      {activeChat ? (
+        <>
+          <ChatConversationPanel activeChat={activeChat} messagesViewport={messagesViewport} />
+          <div className="fixed inset-x-0 bottom-0 z-20 px-4 py-3 md:left-64">
+            <div className="mx-auto max-w-4xl rounded-[20px] border border-[#e8eaf4] bg-[#f9faff] p-3">
             <ChatComposer
               mode="message"
               value={messageDraft}
@@ -275,39 +277,29 @@ export default function ChatPage() {
                 setEditorHtml(activeChat.draftHtml || activeChat.analysis?.editableHtml || '')
               }
             />
-          ) : (
-            <ChatComposer
-              mode="analysis"
-              value={jobDescription}
-              onChange={setJobDescription}
-              selectedCvLabel={
-                selectedCvId
-                  ? (cvs.find((cv) => cv.id === selectedCvId)?.name ?? 'Current CV')
-                  : null
-              }
-              submitting={creatingChat}
-              onSubmit={() => void createNewChat()}
-              onSelectCv={openCvModal}
-            />
-          )}
-        </div>
-      </div>
-
-      <CvSelectionModal
-        open={cvModalOpen}
-        onClose={closeCvModal}
-        cvs={cvs}
-        selectedCvId={selectedCvId}
-        onSelectCv={setSelectedCvId}
-        uploadName={uploadName}
-        onUploadNameChange={setUploadName}
-        uploadedFile={uploadedFile}
-        onChooseFile={chooseFile}
-        fileInputRef={fileInput}
-        onUpload={uploadInlineCv}
-        uploadingCv={uploadingCv}
-        uploadError={uploadError}
-      />
+            </div>
+          </div>
+        </>
+      ) : (
+        <NewAnalysisWorkspace
+          cvs={cvs}
+          loadingCVs={loadingCVs}
+          selectedCvId={selectedCvId}
+          onSelectCv={setSelectedCvId}
+          jobDescription={jobDescription}
+          onJobDescriptionChange={setJobDescription}
+          onCreateChat={() => void createNewChat()}
+          creatingChat={creatingChat}
+          uploadName={uploadName}
+          onUploadNameChange={setUploadName}
+          uploadedFile={uploadedFile}
+          onChooseFile={chooseFile}
+          fileInputRef={fileInput}
+          onUpload={uploadInlineCv}
+          uploadingCv={uploadingCv}
+          uploadError={uploadError}
+        />
+      )}
     </>
   );
 }

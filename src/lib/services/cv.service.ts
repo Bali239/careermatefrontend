@@ -15,7 +15,7 @@ export const cvService = {
       : isDocx
         ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
         : 'application/msword';
-    const response = await api.post('/cvs', file, {
+    const response = await api.post<{ data: CV }>('/cvs', file, {
       headers: {
         'Content-Type': file.type || contentType,
         'X-File-Name': encodeURIComponent(file.name),
@@ -23,7 +23,7 @@ export const cvService = {
       },
       timeout: 60_000,
     });
-    return response.data;
+    return response.data.data;
   },
 
   getFile: async (id: string) => {
