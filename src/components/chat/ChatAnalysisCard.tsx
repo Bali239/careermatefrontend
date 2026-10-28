@@ -1,16 +1,17 @@
 'use client';
 
+import { useState, useMemo } from 'react';
+import { Button, Card, Empty, Tabs, Tag, Tooltip } from 'antd';
 import {
   CheckCircleFilled,
   CloseCircleFilled,
-  EyeOutlined,
+  CopyOutlined,
+  DownOutlined,
   FilePdfOutlined,
   FileWordOutlined,
   RobotOutlined,
   StarOutlined,
 } from '@ant-design/icons';
-import { Button, Card, Tag, Tooltip } from 'antd';
-import { useMemo } from 'react';
 import type { ChatSession } from '@/app/dashboard/models';
 
 type ChatAnalysisCardProps = {
@@ -25,27 +26,25 @@ type ChatAnalysisCardProps = {
   maxRewrites?: number;
 };
 
-function ratingCircle(value: number) {
-  const pct = Math.max(0, Math.min(100, value));
+/* ── helpers ──────────────────────────────────────────────────── */
+
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
+}
+
+function ratingCircle(value: number, max: number = 10) {
+  const pct = clamp((value / max) * 100, 0, 100);
   const strokeDash = 283;
   const offset = strokeDash - (pct / 100) * strokeDash;
-  const color = pct >= 70 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444';
+  const color = pct >= 70 ? '#16a34a' : pct >= 50 ? '#d97706' : '#dc2626';
   return (
-    <div className="relative flex items-center justify-center w-24 h-24">
+    <div className="relative flex items-center justify-center w-28 h-28">
       <svg
-        className="w-24 h-24 -rotate-90 overflow-visible"
+        className="w-28 h-28 -rotate-90"
         viewBox="0 0 100 100"
         aria-label={`Job match rating ${pct} out of 10`}
       >
-        <circle
-          cx="50"
-          cy="50"
-          r="42"
-          stroke="#e5e7eb"
-          strokeWidth="8"
-          fill="none"
-          className="text-slate-200"
-        />
+        <circle cx="50" cy="50" r="42" stroke="#e5e7eb" strokeWidth="8" fill="none" />
         <circle
           cx="50"
           cy="50"
@@ -60,45 +59,49 @@ function ratingCircle(value: number) {
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-        <span className="text-2xl font-bold text-[#111827] leading-none">
+        <span className="text-3xl font-bold text-[#111827] leading-none">
           {Math.round(pct / 10)}
         </span>
-        <span className="text-[10px] font-semibold text-[#6b7280] leading-none">/ 10</span>
+        <span className="text-[10px] font-semibold text-[#6B7280] leading-none mt-1">/ 10</span>
       </div>
     </div>
   );
 }
 
-function metricCard(label: string, value: number | string, sub?: string) {
-  const num = typeof value === 'number' ? Math.round(value) : value;
-  const pct = typeof value === 'number' ? value : 0;
-  const isGood = pct >= 70;
-  const isMed = pct >= 50 && pct < 70;
+function metricCard(label: string, value: number | undefined, sub?: string, primary?: boolean) {
+  const hasValue = typeof value === 'number' && !Number.isNaN(value);
+  const pct = hasValue ? clamp(value as number, 0, 100) : 0;
+  const color =
+    pct >= 70
+      ? 'text-[#16a34a] bg-[#ecfdf5] border-[#dcfce7]'
+      : pct >= 50
+        ? 'text-[#d97706] bg-[#fffbeb] border-[#fef3c7]'
+        : 'text-[#dc2626] bg-[#fef2f2] border-[#fee2e2]';
   return (
     <div
-      className={`group relative rounded-2xl border p-5 flex flex-col gap-2.5 transition-all duration-300 hover:scale-[1.02] hover:border-[#7c6de2] hover:shadow-[0_8px_24px_rgba(124,109,217,0.12)]`}
+      className={`rounded-2xl border p-5 flex flex-col gap-2.5 transition-all duration-200 hover:shadow-sm ${
+        primary
+          ? 'border-[#6554C0] bg-[#f8f7ff]'
+          : 'border-[#e5e7eb] bg-white hover:border-[#d1d5db]'
+      }`}
     >
-      <div className="flex items-center justify-between">
-        <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#6b7280] group-hover:text-[#5d4bc7] transition-colors">
-          {label}
+      <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#6B7280]">
+        {label}
+      </div>
+      <div className="text-3xl font-bold text-[#111827]">
+        {hasValue ? `${Math.round(pct / 10)}/10` : '—'}
+      </div>
+      {hasValue ? (
+        <div className="h-1.5 w-full rounded-full bg-[#f3f4f6] overflow-hidden">
+          <div
+            className={`h-full rounded-full ${primary ? 'bg-[#6554C0]' : 'bg-[#9ca3af]'}`}
+            style={{ width: `${pct}%`, transition: 'width 800ms ease-out' }}
+          />
         </div>
-        <div className="w-2 h-2 rounded-full" />
-      </div>
-      <div className="text-3xl font-bold text-[#111827]">{num}</div>
-      {sub && <div className="text-xs text-[#6b7280]">{sub}</div>}
-      <div className="h-1 w-full rounded-full bg-[#f3f4f6] mt-2 overflow-hidden">
-        <div
-          className="h-full rounded-full transition-all duration-1000 ease-out"
-          style={{
-            width: `${Math.min(100, Math.max(0, pct))}%`,
-            background: isGood
-              ? 'linear-gradient(90deg, #10b981, #34d399)'
-              : isMed
-                ? 'linear-gradient(90deg, #f59e0b, #fbbf24)'
-                : 'linear-gradient(90deg, #ef4444, #f87171)',
-          }}
-        />
-      </div>
+      ) : (
+        <div className="text-xs text-[#9ca3af] italic">Not assessed</div>
+      )}
+      {sub && <div className="text-xs text-[#6B7280]">{sub}</div>}
     </div>
   );
 }
@@ -107,23 +110,39 @@ function skillTag(
   skill: string,
   status?: 'matched' | 'partially matched' | 'not demonstrated' | 'unclear'
 ) {
-  const config: Record<string, { color: string; label?: string }> = {
-    matched: { color: '#10b981', label: 'Matched' },
-    'partially matched': { color: '#f59e0b', label: 'Partial' },
-    'not demonstrated': { color: '#ef4444', label: 'Missing' },
-    unclear: { color: '#8b5cf6', label: 'Unclear' },
+  const config: Record<string, { color: string; label: string }> = {
+    matched: { color: 'green', label: 'Matched' },
+    'partially matched': { color: 'orange', label: 'Partial' },
+    'not demonstrated': { color: 'red', label: 'Missing' },
+    unclear: { color: 'purple', label: 'Unclear' },
   };
   const cfg = config[status ?? 'unclear'] ?? config['unclear'];
   return (
     <Tag
       key={skill}
       color={cfg.color as any}
-      className="!text-xs !font-semibold !px-2 !py-1 !rounded-full border-0 transition-all hover:scale-105"
+      className="!text-xs !font-medium !px-2.5 !py-1 !rounded-full"
     >
       {skill}
     </Tag>
   );
 }
+
+function statusIcon(status?: 'matched' | 'partially matched' | 'not demonstrated' | 'unclear') {
+  if (status === 'matched') return <span className="text-[#16a34a]">✓</span>;
+  if (status === 'partially matched') return <span className="text-[#d97706]">~</span>;
+  if (status === 'not demonstrated') return <span className="text-[#dc2626]">✗</span>;
+  return <span className="text-[#8b5cf6]">?</span>;
+}
+
+function statusLabel(status?: 'matched' | 'partially matched' | 'not demonstrated' | 'unclear') {
+  if (status === 'matched') return 'Matched';
+  if (status === 'partially matched') return 'Partial';
+  if (status === 'not demonstrated') return 'Missing';
+  return 'Unclear';
+}
+
+/* ── component ────────────────────────────────────────────────── */
 
 export default function ChatAnalysisCard({
   analysis,
@@ -138,6 +157,11 @@ export default function ChatAnalysisCard({
 }: ChatAnalysisCardProps) {
   if (!analysis) return null;
 
+  const [activeTab, setActiveTab] = useState('skills');
+  const [skillFilter, setSkillFilter] = useState<'all' | 'matched' | 'partial' | 'missing'>('all');
+  const [showAllRecs, setShowAllRecs] = useState(false);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+
   const latestVersion = useMemo(
     () =>
       [...(generatedCvVersions ?? [])].sort(
@@ -149,11 +173,12 @@ export default function ChatAnalysisCard({
   const rewritesRemaining = Math.max(0, (maxRewrites ?? 3) - (rewriteCount ?? 0));
   const rewriteDisabled = rewritesRemaining === 0;
 
-  const atsScore = Math.round((analysis.atsScore ?? 0) / 10);
+  const atsScore = clamp(analysis.atsScore ?? 0, 0, 100);
   const overallMatch = (analysis.overallJobMatch ?? {}) as {
     score?: number;
     technicalSkills?: number;
     experienceRelevance?: number;
+    educationAlignment?: number;
     keywordCoverage?: number;
     evidenceQuality?: number;
     explanation?: string;
@@ -178,447 +203,563 @@ export default function ChatAnalysisCard({
     aiRecommendations?: string[];
   };
 
+  /* ── derived data ── */
   const cvSkills = useMemo(() => {
     const required = jdBreakdown.requiredSkills ?? [];
-    const preferred = jdBreakdown.preferredSkills ?? [];
-    const matchedReq = skillsComparison
-      .filter((s) => s.status === 'matched')
-      .map((s) => s.requirement);
-    const partialReq = skillsComparison
-      .filter((s) => s.status === 'partially matched')
-      .map((s) => s.requirement);
-    const notMatchedReq = skillsComparison
-      .filter((s) => s.status === 'not demonstrated')
-      .map((s) => s.requirement);
-    return { required, preferred, matchedReq, partialReq, notMatchedReq };
+    const matched = skillsComparison.filter((s) => s.status === 'matched');
+    const partial = skillsComparison.filter((s) => s.status === 'partially matched');
+    const missing = skillsComparison.filter((s) => s.status === 'not demonstrated');
+    const unclear = skillsComparison.filter((s) => s.status === 'unclear');
+    return { required, matched, partial, missing, unclear };
   }, [skillsComparison, jdBreakdown]);
 
+  const filteredSkills = useMemo(() => {
+    if (skillFilter === 'all') return skillsComparison;
+    if (skillFilter === 'matched') return cvSkills.matched;
+    if (skillFilter === 'partial') return cvSkills.partial;
+    if (skillFilter === 'missing') return cvSkills.missing;
+    return skillsComparison;
+  }, [skillFilter, skillsComparison, cvSkills]);
+
+  const topRecs = analysis.recommendations.slice(0, 3);
+  const restRecs = analysis.recommendations.slice(3);
+  const visibleRecs = showAllRecs ? analysis.recommendations : topRecs;
+
+  const handleCopy = (text: string, index: number) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedIndex(index);
+      setTimeout(() => setCopiedIndex(null), 2000);
+    });
+  };
+
+  /* ── interpretation ── */
+  const interpretation =
+    atsScore >= 80
+      ? 'Strong match — your CV aligns well with this role. Minor refinements can strengthen it further.'
+      : atsScore >= 60
+        ? 'Moderate match — several skills align, but key gaps should be addressed to improve your chances.'
+        : atsScore >= 40
+          ? 'Partial match — significant gaps exist. Tailoring your CV to highlight relevant experience is recommended.'
+          : 'Low match — major alignment gaps. Consider whether this role fits your current profile or if significant updates are needed.';
+
   return (
-    <Card className="rounded-[32px] border-0 bg-white shadow-[0_20px_40px_-10px_rgba(0,0,0,0.06)] overflow-hidden transition-all duration-500 hover:shadow-[0_24px_48px_-12px_rgba(0,0,0,0.08)]">
-      {/* Gradient header */}
-      <div className="relative px-7 py-6">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#7c6de2] to-[#5d4bc7] opacity-90 rounded-[28px] overflow-hidden -translate-y-full transition-all duration-500 group-hover:translate-y-0" />
-        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="relative z-10">
-            <div className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-white/90 bg-white/10 px-3 py-1 rounded-full backdrop-blur-sm">
-              <RobotOutlined className="w-3 h-3" />
+    <Card className="rounded-2xl border border-[#e5e7eb] bg-white shadow-sm overflow-hidden">
+      {/* ── Header ── */}
+      <div className="px-6 py-5 border-b border-[#f3f4f6]">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6554C0]">
+              <RobotOutlined className="text-sm" />
               CV Job Match Analysis
             </div>
-            <div className="mt-2 text-xl font-bold text-white leading-none">
-              {analysis.summary?.slice(0, 100)}…
+            <div className="mt-1.5 text-lg font-semibold text-[#111827] leading-snug line-clamp-2">
+              {analysis.summary || 'Analysis complete'}
             </div>
+            <div className="mt-1 text-xs text-[#6B7280]">{'Analysis complete'}</div>
           </div>
-          <div className="relative z-10 flex flex-col items-center gap-2">
+          <div className="flex flex-col items-center gap-1 shrink-0">
             {ratingCircle(atsScore)}
-            <div className="text-sm font-semibold text-white leading-none">
-              {atsScore}/10 Job Fit
-            </div>
+            <div className="text-xs font-medium text-[#6B7280]">{interpretation.slice(0, 60)}…</div>
           </div>
         </div>
       </div>
 
-      <div className="p-7">
-        {/* Match Metrics */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-7">
-          {metricCard('Job Match', overallMatch.score ?? atsScore * 10, '% fit')}
-          {metricCard('Technical', overallMatch.technicalSkills ?? atsScore * 10, '% match')}
-          {metricCard('Experience', overallMatch.experienceRelevance ?? atsScore * 10, '% match')}
-          {metricCard('Keywords', overallMatch.keywordCoverage ?? atsScore * 10, '% coverage')}
-          {metricCard('Evidence', overallMatch.evidenceQuality ?? atsScore * 10, '% quality')}
+      <div className="p-6">
+        {/* ── Match Metrics ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+          {metricCard(
+            'Job Match',
+            overallMatch.score !== undefined ? overallMatch.score : undefined,
+            'Overall fit',
+            true
+          )}
+          {metricCard('Technical Skills', overallMatch.technicalSkills, 'Skills alignment')}
+          {metricCard('Experience', overallMatch.experienceRelevance, 'Relevance')}
+          {metricCard('Keywords', overallMatch.keywordCoverage, 'Coverage')}
+          {metricCard('Evidence', overallMatch.evidenceQuality, 'Quality')}
         </div>
 
-        {/* Skills Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-7">
-          <div className="lg:col-span-2">
-            <div className="rounded-2xl border border-[#f3f4f6] bg-[#fafafa] p-6 transition-all duration-300 hover:border-[#dfe3ff] hover:bg-[#fdfdff]">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-2 h-2 rounded-full bg-[#5d4bc7]" />
-                <h3 className="text-sm font-bold text-[#111827]">Skills Comparison</h3>
-              </div>
-              <div className="grid grid-cols-2 gap-4 mb-5">
-                <div className="flex flex-col gap-2">
-                  <div className="text-[10px] font-bold uppercase text-[#5d4bc7]">CV Mentioned</div>
-                  <div className="flex flex-wrap gap-2">
-                    {cvSkills.matchedReq.length > 0 ? (
-                      cvSkills.matchedReq.map((s) => skillTag(s, 'matched'))
-                    ) : (
-                      <span className="text-xs text-[#9ca3af]">None matched</span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <div className="text-[10px] font-bold uppercase text-[#f59e0b]">
-                    Required by JD
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {cvSkills.required.length > 0 ? (
-                      cvSkills.required.map((s) => {
-                        const found = skillsComparison.find((sc) => sc.requirement === s);
-                        return skillTag(s, found?.status);
-                      })
-                    ) : (
-                      <span className="text-xs text-[#9ca3af]">None specified</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-              {cvSkills.partialReq.length > 0 && (
-                <div className="mb-4 p-4 rounded-xl border border-[#fef3c7] bg-[#fffbeb]">
-                  <div className="text-[10px] font-bold uppercase text-[#ca8a04] flex items-center gap-2">
-                    <StarOutlined className="w-3 h-3" />
-                    Partially Matched
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-2 text-sm text-[#92400e]">
-                    {cvSkills.partialReq.map((s) => skillTag(s, 'partially matched'))}
-                  </div>
-                </div>
-              )}
-              {cvSkills.notMatchedReq.length > 0 && (
-                <div className="p-4 rounded-xl border border-[#fee2e2] bg-[#fef2f2]">
-                  <div className="text-[10px] font-bold uppercase text-[#ef4444] flex items-center gap-2">
-                    <CloseCircleFilled className="w-3 h-3" />
-                    Not Demonstrated
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-2 text-sm text-[#991b1b]">
-                    {cvSkills.notMatchedReq.map((s) => skillTag(s, 'not demonstrated'))}
-                  </div>
-                </div>
-              )}
+        {/* ── Key Findings ── */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {/* Strengths */}
+          <div className="rounded-xl border border-[#dcfce7] bg-[#f0fdf4] p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <CheckCircleFilled className="text-[#16a34a] text-sm" />
+              <h3 className="text-sm font-semibold text-[#166534]">Key Strengths</h3>
             </div>
-          </div>
-
-          <div className="lg:col-span-1">
-            <div className="rounded-2xl border border-[#fee2e2] bg-[#fef2f2] p-6 transition-all duration-300 hover:border-[#ef4444]">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-2 h-2 rounded-full bg-[#ef4444]" />
-                <h3 className="text-sm font-bold text-[#991b1b]">Missing Skills</h3>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {analysis.missingSkills.length > 0 ? (
-                  analysis.missingSkills.map((skill) => skillTag(skill, 'not demonstrated'))
-                ) : (
-                  <div className="text-sm text-[#6b7280]">No major missing skills detected.</div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Strengths & Gaps */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-7">
-          <div className="rounded-2xl border border-[#dbeafe] bg-[#f8fafc] p-6 transition-all duration-300 hover:border-[#2563eb]">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-2 h-2 rounded-full bg-[#2563eb]" />
-              <h3 className="text-sm font-bold text-[#1e3a8a]">Strengths</h3>
-            </div>
-            <div className="space-y-3">
+            <div className="space-y-2">
               {analysis.strengths.length > 0 ? (
                 analysis.strengths.map((s) => (
                   <div
                     key={s}
-                    className="flex items-start gap-3 text-sm text-[#1e3a8a] px-4 py-2 rounded-xl bg-white/50 transition-colors hover:bg-white"
+                    className="text-sm text-[#166534] leading-relaxed flex items-start gap-2"
                   >
-                    <CheckCircleFilled className="w-3.5 h-3.5 shrink-0 text-[#10b981] mt-[2px]" />
+                    <span className="text-[#16a34a] shrink-0">•</span>
                     {s}
                   </div>
                 ))
               ) : (
-                <div className="text-sm text-[#6b7280]">No strengths identified.</div>
+                <div className="text-sm text-[#6B7280]">No strengths identified.</div>
               )}
             </div>
           </div>
-          <div className="rounded-2xl border border-[#fecaca] bg-[#fef2f2] p-6 transition-all duration-300 hover:border-[#ef4444]">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-2 h-2 rounded-full bg-[#ef4444]" />
-              <h3 className="text-sm font-bold text-[#991b1b]">Gaps to Improve</h3>
+
+          {/* Skills to Address (Missing) */}
+          <div className="rounded-xl border border-[#fee2e2] bg-[#fef2f2] p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <CloseCircleFilled className="text-[#dc2626] text-sm" />
+              <h3 className="text-sm font-semibold text-[#991b1b]">Skills to Address</h3>
             </div>
-            <div className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              {analysis.missingSkills.length > 0 ? (
+                analysis.missingSkills.map((skill) => skillTag(skill, 'not demonstrated'))
+              ) : (
+                <div className="text-sm text-[#6B7280]">No major missing skills detected.</div>
+              )}
+            </div>
+          </div>
+
+          {/* Areas for Improvement (Gaps) */}
+          <div className="rounded-xl border border-[#fef3c7] bg-[#fffbeb] p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <StarOutlined className="text-[#d97706] text-sm" />
+              <h3 className="text-sm font-semibold text-[#92400e]">Areas for Improvement</h3>
+            </div>
+            <div className="space-y-2">
               {analysis.gaps.length > 0 ? (
                 analysis.gaps.map((g) => (
                   <div
                     key={g}
-                    className="flex items-start gap-3 text-sm text-[#991b1b] px-4 py-2 rounded-xl bg-white/50 transition-colors hover:bg-white"
+                    className="text-sm text-[#92400e] leading-relaxed flex items-start gap-2"
                   >
-                    <CloseCircleFilled className="w-3.5 h-3.5 shrink-0 text-[#ef4444] mt-[2px]" />
+                    <span className="text-[#d97706] shrink-0">•</span>
                     {g}
                   </div>
                 ))
               ) : (
-                <div className="text-sm text-[#6b7280]">No major gaps identified.</div>
+                <div className="text-sm text-[#6B7280]">No major gaps identified.</div>
               )}
             </div>
           </div>
         </div>
 
-        {/* Score Breakdown */}
-        {scoreBreakdown.length > 0 && (
-          <div className="mb-7">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-2 h-2 rounded-full bg-[#7c3aed]" />
-              <h3 className="text-sm font-bold text-[#111827]">Score Breakdown</h3>
-            </div>
-            <div className="space-y-4">
-              {scoreBreakdown.map((item) => {
-                const pct = Math.max(0, Math.min(100, item.score));
-                return (
-                  <div key={item.label} className="group flex flex-col gap-2">
-                    <div className="flex items-center justify-between text-xs font-medium">
-                      <span className="text-[#374151]">{item.label}</span>
-                      <span className="font-bold text-[#111827]">{Math.round(pct)}/10</span>
-                    </div>
-                    <div className="relative h-2 w-full rounded-full bg-[#e5e7eb] overflow-hidden">
-                      <div
-                        className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-[#7c3aed] to-[#a855f7] shadow-[0_0_10px_rgba(124,58,237,0.4)]"
-                        style={{
-                          width: `${pct * 10}%`,
-                          transition: 'width 1000ms ease-out',
-                        }}
-                      />
-                    </div>
-                    <div className="text-[10px] text-[#6b7280]">{item.note}</div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Experience Insights */}
-        {experienceInsights.length > 0 && (
-          <div className="mb-7">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-2 h-2 rounded-full bg-[#059669]" />
-              <h3 className="text-sm font-bold text-[#111827]">Experience Insights</h3>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {experienceInsights.map((insight) => {
-                const color =
-                  insight.relevance === 'high'
-                    ? 'border-[#10b981] bg-[#ecfdf5] text-[#166534]'
-                    : insight.relevance === 'medium'
-                      ? 'border-[#f59e0b] bg-[#fffbeb] text-[#92400e]'
-                      : 'border-[#ef4444] bg-[#fef2f2] text-[#991b1b]';
-                return (
-                  <div
-                    key={insight.title}
-                    className={`rounded-2xl border p-5 ${color} transition-all duration-300 hover:scale-[1.01]`}
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-sm font-bold text-[#111827]">{insight.title}</h4>
-                      <Tag
-                        color={
-                          insight.relevance === 'high'
-                            ? 'green'
-                            : insight.relevance === 'medium'
-                              ? 'yellow'
-                              : 'red'
-                        }
-                      >
-                        {insight.relevance}
-                      </Tag>
-                    </div>
-                    {insight.skillsDemonstrated.length > 0 && (
-                      <div className="mb-3">
-                        <div className="text-[10px] font-bold uppercase text-[#6b7280] mb-1">
-                          Skills Shown
-                        </div>
-                        <div className="flex flex-wrap gap-1">
-                          {insight.skillsDemonstrated.map((s) => (
-                            <Tag key={s} color="blue" className="!text-[10px] !px-1.5 !py-0.5">
-                              {s}
-                            </Tag>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {insight.weaknesses.length > 0 && (
-                      <div className="mb-3">
-                        <div className="text-[10px] font-bold uppercase text-[#6b7280] mb-1">
-                          Weaknesses
-                        </div>
-                        <div className="mt-1 text-sm text-[#374151] leading-relaxed">
-                          {insight.weaknesses.join(', ')}
-                        </div>
-                      </div>
-                    )}
-                    {insight.priorities.length > 0 && (
-                      <div>
-                        <div className="text-[10px] font-bold uppercase text-[#6b7280] mb-1">
-                          Priorities
-                        </div>
-                        <div className="mt-1 text-sm text-[#111827] leading-relaxed">
-                          {insight.priorities.join(', ')}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* ATS Readiness */}
-        {Object.keys(atsReadiness).length > 0 && (
-          <div className="mb-7">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-2 h-2 rounded-full bg-[#5d4bc7]" />
-              <h3 className="text-sm font-bold text-[#111827]">ATS Readiness</h3>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {[
-                { label: 'Keyword Coverage', val: atsReadiness.keywordCoverage },
-                { label: 'Standard Headings', val: atsReadiness.standardHeadings },
-                { label: 'Contact Info', val: atsReadiness.contactInformation },
-                { label: 'Chronology', val: atsReadiness.chronology },
-                { label: 'Readability', val: atsReadiness.readability },
-                { label: 'Quantified Achievements', val: atsReadiness.quantifiedAchievements },
-              ].map((item) => (
-                <div
-                  key={item.label}
-                  className="rounded-xl border border-[#f3f4f6] bg-white p-3.5 transition-all duration-300 hover:border-[#dfe3ff] hover:shadow-sm"
-                >
-                  <div className="text-[10px] font-bold uppercase text-[#6b7280]">{item.label}</div>
-                  <div className="mt-1 text-sm font-medium text-[#111827]">{item.val ?? 'N/A'}</div>
-                </div>
-              ))}
-              {atsReadiness.technicalDocumentChecks &&
-                atsReadiness.technicalDocumentChecks.length > 0 && (
-                  <div className="md:col-span-3 rounded-xl border border-[#f3f4f6] bg-white p-3.5 transition-all duration-300 hover:border-[#dfe3ff] hover:shadow-sm">
-                    <div className="text-[10px] font-bold uppercase text-[#6b7280] mb-2">
-                      Technical Checks
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {atsReadiness.technicalDocumentChecks.map((c) => (
-                        <Tag key={c} color="green" className="!text-[10px] !px-2 !py-1">
-                          {c}
-                        </Tag>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              {atsReadiness.aiRecommendations && atsReadiness.aiRecommendations.length > 0 && (
-                <div className="md:col-span-3 rounded-xl border border-[#f3f4f6] bg-white p-3.5 transition-all duration-300 hover:border-[#dfe3ff] hover:shadow-sm mt-3">
-                  <div className="text-[10px] font-bold uppercase text-[#6b7280] mb-2">
-                    AI Recommendations
-                  </div>
-                  <ul className="mt-1 space-y-1 text-sm text-[#374151] list-disc pl-5">
-                    {atsReadiness.aiRecommendations.map((c) => (
-                      <li key={c}>{c}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Recommendations */}
+        {/* ── Recommendations (top 3 + expand) ── */}
         {analysis.recommendations.length > 0 && (
-          <div className="mb-7">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-2 h-2 rounded-full bg-[#5d4bc7]" />
-              <h3 className="text-sm font-bold text-[#111827]">Improvement Recommendations</h3>
-            </div>
+          <div className="mb-6">
+            <h3 className="text-sm font-semibold text-[#111827] mb-3">Priority Recommendations</h3>
             <div className="space-y-3">
-              {analysis.recommendations.map((rec, i) => (
+              {visibleRecs.map((rec, i) => (
                 <div
                   key={i}
-                  className="rounded-xl border border-[#f3f4f6] bg-white p-5 transition-all duration-300 hover:border-[#7c6de2] hover:shadow-[0_4px_12px_rgba(124,109,217,0.08)]"
+                  className="rounded-xl border border-[#e5e7eb] bg-white p-4 hover:border-[#d1d5db] transition-colors"
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1">
-                      <div className="text-sm font-semibold text-[#111827] leading-relaxed">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold text-[#111827]">
                         {rec.issue || `Recommendation ${i + 1}`}
                       </div>
                       {rec.whyItMatters && (
-                        <div className="mt-2 text-sm text-[#6b7280] leading-relaxed">
+                        <div className="mt-1.5 text-sm text-[#6B7280] leading-relaxed">
                           {rec.whyItMatters}
                         </div>
                       )}
                       {rec.suggestedImprovement && (
-                        <div className="mt-3 p-4 rounded-xl border border-[#dfe3ff] bg-[#f8fafc]">
-                          <div className="text-[10px] font-bold uppercase text-[#5d4bc7]">
+                        <div className="mt-2.5 p-3 rounded-lg border border-[#e0e7ff] bg-[#f8faff]">
+                          <div className="text-[10px] font-bold uppercase text-[#6554C0] mb-1">
                             Suggested Improvement
                           </div>
-                          <div className="mt-1 text-sm text-[#374151] leading-relaxed">
+                          <div className="text-sm text-[#374151] leading-relaxed">
                             {rec.suggestedImprovement}
                           </div>
                         </div>
                       )}
                       {rec.relevantSection && (
-                        <div className="mt-3 inline-block text-xs font-medium text-[#5d4bc7] bg-[#f0edff] px-2 py-1 rounded-full">
+                        <div className="mt-2 inline-block text-xs font-medium text-[#6554C0] bg-[#f0edff] px-2 py-0.5 rounded-full">
                           Section: {rec.relevantSection}
                         </div>
                       )}
                     </div>
-                    <span className="flex shrink-0 items-center justify-center w-6 h-6 rounded-full bg-[#5d4bc7] text-white text-[10px] font-bold">
-                      #{i + 1}
-                    </span>
+                    <div className="flex flex-col items-center gap-2 shrink-0">
+                      <span className="flex items-center justify-center w-6 h-6 rounded-full bg-[#6554C0] text-white text-[10px] font-bold">
+                        {i + 1}
+                      </span>
+                      {rec.suggestedImprovement && (
+                        <Tooltip title={copiedIndex === i ? 'Copied!' : 'Copy suggestion'}>
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(rec.suggestedImprovement!, i)}
+                            className="text-[#6B7280] hover:text-[#6554C0] transition-colors"
+                            aria-label="Copy suggestion"
+                          >
+                            <CopyOutlined className="text-sm" />
+                          </button>
+                        </Tooltip>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
-        )}
-
-        {/* Overall Assessment */}
-        {overallMatch.explanation && (
-          <div className="rounded-2xl border border-[#dfe3ff] bg-[#f8faff] p-5 mb-7">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-2 h-2 rounded-full bg-[#5d4bc7]" />
-              <div className="text-[10px] font-bold uppercase text-[#5d4bc7]">
-                Overall Assessment
-              </div>
-            </div>
-            <div className="text-sm text-[#1e3a8a] leading-relaxed">{overallMatch.explanation}</div>
-          </div>
-        )}
-      </div>
-
-      {/* Footer Actions */}
-      <div className="px-7 py-5 border-t border-[#f3f4f6] bg-[#fafafa] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        {onRewrite && (
-          <Button
-            type="primary"
-            onClick={onRewrite}
-            loading={rewriting}
-            disabled={rewriteDisabled}
-            className="rounded-xl px-7 py-3 text-sm font-semibold bg-[#5d4bc7] disabled:bg-[#c9c4dd] disabled:text-[#6b7280] hover:bg-[#4c3cb2] transition-all duration-300 shadow-lg hover:shadow-[0_10px_20px_rgba(93,75,199,0.25)]"
-          >
-            {rewriting ? (
-              <>Generating…</>
-            ) : rewriteDisabled ? (
-              `Rewrite Limit Reached (${maxRewrites})`
-            ) : (
-              `Rewrite My CV (${rewritesRemaining} left)`
+            {analysis.recommendations.length > 3 && (
+              <button
+                type="button"
+                onClick={() => setShowAllRecs(!showAllRecs)}
+                className="mt-3 text-sm font-medium text-[#6554C0] hover:text-[#5a4ab5] transition-colors flex items-center gap-1"
+              >
+                {showAllRecs
+                  ? 'Show less'
+                  : `Show ${analysis.recommendations.length - 3} more recommendations`}
+                <DownOutlined
+                  className={`text-xs transition-transform ${showAllRecs ? 'rotate-180' : ''}`}
+                />
+              </button>
             )}
-          </Button>
-        )}
-        {latestVersion && latestVersion.status === 'completed' && onDownloadGenerated && (
-          <div className="flex gap-3">
-            <Button
-              size="small"
-              variant="outlined"
-              loading={downloadingVersionId === latestVersion.id && downloadingFormat === 'docx'}
-              onClick={() => onDownloadGenerated(latestVersion.id, 'docx')}
-              className="rounded-xl px-5 py-2.5 text-sm font-semibold border-0 bg-[#5d4bc7] text-white disabled:opacity-50 transition-all duration-300"
-              icon={<FileWordOutlined />}
-            >
-              DOCX
-            </Button>
-            <Button
-              size="small"
-              variant="outlined"
-              loading={downloadingVersionId === latestVersion.id && downloadingFormat === 'pdf'}
-              onClick={() => onDownloadGenerated(latestVersion.id, 'pdf')}
-              className="rounded-xl px-5 py-2.5 text-sm font-semibold border-0 bg-[#ef4444] text-white disabled:opacity-50 transition-all duration-300"
-              icon={<FilePdfOutlined />}
-            >
-              PDF
-            </Button>
           </div>
         )}
+
+        {/* ── Detailed Analysis (Tabs) ── */}
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          className="mb-6"
+          items={[
+            {
+              key: 'skills',
+              label: 'Skills',
+              children: (
+                <div className="space-y-4">
+                  {/* Filter buttons */}
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {(['all', 'matched', 'partial', 'missing'] as const).map((f) => (
+                      <button
+                        key={f}
+                        type="button"
+                        onClick={() => setSkillFilter(f)}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
+                          skillFilter === f
+                            ? 'bg-[#6554C0] text-white border-[#6554C0]'
+                            : 'bg-white text-[#6B7280] border-[#e5e7eb] hover:border-[#6554C0] hover:text-[#6554C0]'
+                        }`}
+                      >
+                        {f === 'all'
+                          ? 'All'
+                          : f === 'matched'
+                            ? 'Matched'
+                            : f === 'partial'
+                              ? 'Partial'
+                              : 'Missing'}
+                        <span className="ml-1.5 text-[10px] opacity-70">
+                          {f === 'all'
+                            ? skillsComparison.length
+                            : f === 'matched'
+                              ? cvSkills.matched.length
+                              : f === 'partial'
+                                ? cvSkills.partial.length
+                                : cvSkills.missing.length}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Skills list */}
+                  {filteredSkills.length > 0 ? (
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {filteredSkills.map((item, i) => (
+                        <div
+                          key={i}
+                          className="flex items-start gap-3 p-3 rounded-lg border border-[#f3f4f6] bg-[#fafafa] hover:bg-white transition-colors"
+                        >
+                          <span className="shrink-0 mt-0.5">{statusIcon(item.status)}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-sm font-medium text-[#111827]">
+                                {item.requirement}
+                              </span>
+                              <span className="text-[10px] font-medium text-[#6B7280] bg-[#f3f4f6] px-1.5 py-0.5 rounded">
+                                {statusLabel(item.status)}
+                              </span>
+                              <span className="text-[10px] font-medium text-[#9ca3af]">
+                                {item.importance}
+                              </span>
+                            </div>
+                            {item.explanation && (
+                              <div className="mt-1 text-xs text-[#6B7280] leading-relaxed">
+                                {item.explanation}
+                              </div>
+                            )}
+                            {item.nextAction && (
+                              <div className="mt-1.5 text-xs text-[#6554C0] font-medium">
+                                → {item.nextAction}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-[#6B7280] py-8 text-center">
+                      No skills data available for this filter.
+                    </div>
+                  )}
+
+                  {/* JD Breakdown */}
+                  {jdBreakdown.requiredSkills && jdBreakdown.requiredSkills.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-[#f3f4f6]">
+                      <div className="text-xs font-semibold text-[#6B7280] mb-2">
+                        Required Skills (from JD)
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {jdBreakdown.requiredSkills.map((s) => skillTag(s))}
+                      </div>
+                    </div>
+                  )}
+                  {jdBreakdown.preferredSkills && jdBreakdown.preferredSkills.length > 0 && (
+                    <div className="mt-3">
+                      <div className="text-xs font-semibold text-[#6B7280] mb-2">
+                        Preferred Skills (from JD)
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {jdBreakdown.preferredSkills.map((s) => skillTag(s))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ),
+            },
+            {
+              key: 'experience',
+              label: 'Experience',
+              children: (
+                <div className="space-y-4">
+                  {experienceInsights.length > 0 ? (
+                    experienceInsights.map((insight) => {
+                      const color =
+                        insight.relevance === 'high'
+                          ? 'border-[#dcfce7] bg-[#f0fdf4]'
+                          : insight.relevance === 'medium'
+                            ? 'border-[#fef3c7] bg-[#fffbeb]'
+                            : 'border-[#fee2e2] bg-[#fef2f2]';
+                      return (
+                        <div key={insight.title} className={`rounded-xl border p-4 ${color}`}>
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-sm font-bold text-[#111827]">{insight.title}</h4>
+                            <Tag
+                              color={
+                                insight.relevance === 'high'
+                                  ? 'green'
+                                  : insight.relevance === 'medium'
+                                    ? 'orange'
+                                    : 'red'
+                              }
+                              className="!text-[10px]"
+                            >
+                              {insight.relevance}
+                            </Tag>
+                          </div>
+                          {insight.skillsDemonstrated.length > 0 && (
+                            <div className="mb-2">
+                              <div className="text-[10px] font-bold uppercase text-[#6B7280] mb-1">
+                                Skills Shown
+                              </div>
+                              <div className="flex flex-wrap gap-1">
+                                {insight.skillsDemonstrated.map((s) => (
+                                  <Tag
+                                    key={s}
+                                    color="blue"
+                                    className="!text-[10px] !px-1.5 !py-0.5"
+                                  >
+                                    {s}
+                                  </Tag>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {insight.weaknesses.length > 0 && (
+                            <div className="mb-2">
+                              <div className="text-[10px] font-bold uppercase text-[#6B7280] mb-1">
+                                Weaknesses
+                              </div>
+                              <div className="text-sm text-[#374151] leading-relaxed">
+                                {insight.weaknesses.join(', ')}
+                              </div>
+                            </div>
+                          )}
+                          {insight.priorities.length > 0 && (
+                            <div>
+                              <div className="text-[10px] font-bold uppercase text-[#6B7280] mb-1">
+                                Priorities
+                              </div>
+                              <div className="text-sm text-[#111827] leading-relaxed">
+                                {insight.priorities.join(', ')}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-sm text-[#6B7280] py-8 text-center">
+                      No experience insights available.
+                    </div>
+                  )}
+                </div>
+              ),
+            },
+            {
+              key: 'scores',
+              label: 'Score Breakdown',
+              children: (
+                <div className="space-y-4">
+                  {scoreBreakdown.length > 0 ? (
+                    scoreBreakdown.map((item) => {
+                      const pct = clamp(item.score, 0, 100);
+                      return (
+                        <div key={item.label} className="flex flex-col gap-1.5">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-medium text-[#374151]">{item.label}</span>
+                            <span className="font-bold text-[#111827]">{Math.round(pct)}/100</span>
+                          </div>
+                          <div className="w-full h-2 rounded-full bg-[#f3f4f6] overflow-hidden">
+                            <div
+                              className="h-full bg-[#6554C0] rounded-full"
+                              style={{ width: `${pct}%`, transition: 'width 800ms ease-out' }}
+                            />
+                          </div>
+                          <div className="text-[10px] text-[#6B7280] leading-relaxed">
+                            {item.note}
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-sm text-[#6B7280] py-8 text-center">
+                      No score breakdown available.
+                    </div>
+                  )}
+                </div>
+              ),
+            },
+            {
+              key: 'ats',
+              label: 'ATS Readiness',
+              children: (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {[
+                      { label: 'Keyword Coverage', val: atsReadiness.keywordCoverage },
+                      { label: 'Standard Headings', val: atsReadiness.standardHeadings },
+                      { label: 'Contact Information', val: atsReadiness.contactInformation },
+                      { label: 'Chronology', val: atsReadiness.chronology },
+                      { label: 'Readability', val: atsReadiness.readability },
+                      {
+                        label: 'Quantified Achievements',
+                        val: atsReadiness.quantifiedAchievements,
+                      },
+                    ].map((item) => (
+                      <div
+                        key={item.label}
+                        className="rounded-xl border border-[#f3f4f6] bg-[#fafafa] p-3.5"
+                      >
+                        <div className="text-[10px] font-bold uppercase text-[#6B7280]">
+                          {item.label}
+                        </div>
+                        <div className="mt-1 text-sm text-[#374151] leading-relaxed">
+                          {item.val ?? 'Not assessed'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {atsReadiness.technicalDocumentChecks &&
+                    atsReadiness.technicalDocumentChecks.length > 0 && (
+                      <div className="rounded-xl border border-[#f3f4f6] bg-[#fafafa] p-3.5">
+                        <div className="text-[10px] font-bold uppercase text-[#6B7280] mb-2">
+                          Technical Document Checks
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {atsReadiness.technicalDocumentChecks.map((c) => (
+                            <Tag key={c} color="green" className="!text-[10px]">
+                              {c}
+                            </Tag>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  {atsReadiness.aiRecommendations && atsReadiness.aiRecommendations.length > 0 && (
+                    <div className="rounded-xl border border-[#f3f4f6] bg-[#fafafa] p-3.5">
+                      <div className="text-[10px] font-bold uppercase text-[#6B7280] mb-2">
+                        AI Recommendations
+                      </div>
+                      <ul className="space-y-1 text-sm text-[#374151] list-disc pl-5">
+                        {atsReadiness.aiRecommendations.map((c) => (
+                          <li key={c}>{c}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  <div className="text-xs text-[#9ca3af] italic mt-2">
+                    Note: These are AI-generated estimates, not actual scores from an employer's
+                    applicant tracking system.
+                  </div>
+                </div>
+              ),
+            },
+          ]}
+        />
+
+        {/* ── Overall Assessment ── */}
+        {overallMatch.explanation && (
+          <div className="rounded-xl border border-[#e0e7ff] bg-[#f8faff] p-5 mb-6">
+            <div className="text-[10px] font-bold uppercase text-[#6554C0] mb-2">
+              Overall Assessment
+            </div>
+            <div className="text-sm text-[#374151] leading-relaxed">{overallMatch.explanation}</div>
+          </div>
+        )}
+
+        {/* ── Footer Actions ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-4 border-t border-[#f3f4f6]">
+          <div className="flex items-center gap-2">
+            {onRewrite && (
+              <Button
+                type="primary"
+                onClick={onRewrite}
+                loading={rewriting}
+                disabled={rewriteDisabled}
+                className="rounded-lg px-5 py-2 text-sm font-semibold bg-[#6554C0] disabled:bg-[#d1d5db] disabled:text-[#6b7280] hover:bg-[#5a4ab5]"
+              >
+                {rewriting
+                  ? 'Generating…'
+                  : rewriteDisabled
+                    ? `Rewrite Limit Reached (${maxRewrites})`
+                    : `Rewrite My CV (${rewritesRemaining} left)`}
+              </Button>
+            )}
+          </div>
+          {latestVersion && latestVersion.status === 'completed' && onDownloadGenerated && (
+            <div className="flex gap-2">
+              <Button
+                size="small"
+                variant="outlined"
+                loading={downloadingVersionId === latestVersion.id && downloadingFormat === 'docx'}
+                onClick={() => onDownloadGenerated(latestVersion.id, 'docx')}
+                className="rounded-lg px-4 py-2 text-sm font-medium"
+                icon={<FileWordOutlined />}
+              >
+                DOCX
+              </Button>
+              <Button
+                size="small"
+                variant="outlined"
+                loading={downloadingVersionId === latestVersion.id && downloadingFormat === 'pdf'}
+                onClick={() => onDownloadGenerated(latestVersion.id, 'pdf')}
+                className="rounded-lg px-4 py-2 text-sm font-medium"
+                icon={<FilePdfOutlined />}
+              >
+                PDF
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
     </Card>
   );
