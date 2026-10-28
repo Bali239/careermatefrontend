@@ -6,10 +6,8 @@ import {
   FileTextOutlined,
   RobotOutlined,
   ThunderboltOutlined,
-  UploadOutlined,
 } from '@ant-design/icons';
 import { Button, Input, Spin, Tag, Tooltip } from 'antd';
-import type { FormEventHandler, RefObject } from 'react';
 import type { CV } from '../models';
 
 type NewAnalysisWorkspaceProps = {
@@ -21,20 +19,9 @@ type NewAnalysisWorkspaceProps = {
   onJobDescriptionChange: (value: string) => void;
   onCreateChat: () => void;
   creatingChat: boolean;
-  uploadName: string;
-  onUploadNameChange: (value: string) => void;
-  uploadedFile: File | null;
-  onChooseFile: (file: File | null) => void;
-  fileInputRef: RefObject<HTMLInputElement | null>;
-  onUpload: FormEventHandler<HTMLFormElement>;
-  uploadingCv: boolean;
-  uploadError: string;
   analysisProgress: number;
   analysisStage: string;
 };
-
-const ACCEPTED_FILE_TYPES =
-  '.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
 function formatFileSize(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
@@ -71,14 +58,6 @@ export default function NewAnalysisWorkspace({
   onJobDescriptionChange,
   onCreateChat,
   creatingChat,
-  uploadName,
-  onUploadNameChange,
-  uploadedFile,
-  onChooseFile,
-  fileInputRef,
-  onUpload,
-  uploadingCv,
-  uploadError,
   analysisProgress,
   analysisStage,
 }: NewAnalysisWorkspaceProps) {
@@ -192,7 +171,7 @@ export default function NewAnalysisWorkspace({
                 </div>
                 <div>
                   <p className="text-sm font-medium text-[#4c4a5a]">No CV selected</p>
-                  <p className="mt-0.5 text-xs text-[#898696]">Choose one below or upload a new file.</p>
+                  <p className="mt-0.5 text-xs text-[#898696]">Choose one from your CV library.</p>
                 </div>
               </div>
             )}
@@ -240,59 +219,9 @@ export default function NewAnalysisWorkspace({
               )}
             </div>
 
-            <form onSubmit={onUpload} className="mt-auto">
-              <div className="rounded-xl border border-dashed border-[#d9d4e9] bg-[#fbfaff] p-3.5">
-                <div className="flex items-center gap-2 text-sm font-medium text-[#4c495d]">
-                  <UploadOutlined className="text-[#796bd2]" />
-                  Upload your CV
-                </div>
-                <p className="mb-3 mt-1 text-xs text-[#898696]">PDF, DOC, or DOCX, up to 10 MB</p>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept={ACCEPTED_FILE_TYPES}
-                  className="hidden"
-                  onChange={(event) => {
-                    onChooseFile(event.target.files?.[0] ?? null);
-                    event.currentTarget.value = '';
-                  }}
-                />
-                <div className="flex min-w-0 items-center gap-2">
-                  <Button
-                    icon={<UploadOutlined />}
-                    onClick={() => fileInputRef.current?.click()}
-                    className="shrink-0"
-                  >
-                    {uploadedFile ? 'Replace file' : 'Browse files'}
-                  </Button>
-                  {uploadedFile && (
-                    <span className="min-w-0 flex-1 truncate text-xs text-[#656274]" title={uploadedFile.name}>
-                      {uploadedFile.name}
-                    </span>
-                  )}
-                </div>
-                {uploadedFile && (
-                  <div className="mt-3 flex min-w-0 gap-2">
-                    <Input
-                      value={uploadName}
-                      onChange={(event) => onUploadNameChange(event.target.value)}
-                      maxLength={120}
-                      aria-label="CV name"
-                      placeholder="CV name (optional)"
-                      className="min-w-0"
-                    />
-                    <Button type="primary" htmlType="submit" loading={uploadingCv}>
-                      Save CV
-                    </Button>
-                  </div>
-                )}
-                {uploadError && (
-                  <p role="alert" className="mt-2 text-xs font-medium text-red-600">
-                    {uploadError}
-                  </p>
-                )}
-              </div>
-            </form>
+            <p className="mt-auto rounded-xl border border-dashed border-[#d9d4e9] bg-[#fbfaff] px-3.5 py-3 text-center text-xs leading-5 text-[#898696]">
+              Need to add a new CV? Upload it from your CV library first, then return here to select it.
+            </p>
           </section>
         </div>
 

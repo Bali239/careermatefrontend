@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { chatService } from '@/lib/services/chat.service';
 import { cvService } from '@/lib/services/cv.service';
@@ -9,13 +9,6 @@ import type { CV, ChatSession } from '../models';
 import NewAnalysisWorkspace from './NewAnalysisWorkspace';
 import ChatConversationPanel from './ChatConversationPanel';
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
-const ACCEPTED = [
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-];
-
 export default function ChatPage() {
   const [cvs, setCvs] = useState<CV[]>([]);
   const [selectedCvId, setSelectedCvId] = useState('');
@@ -23,13 +16,8 @@ export default function ChatPage() {
   const [loadingCVs, setLoadingCVs] = useState(true);
   const [creatingChat, setCreatingChat] = useState(false);
   const { chatList, setChatList, activeChatId, selectChat } = useChatNavigation();
-  const [uploadingCv, setUploadingCv] = useState(false);
-  const [uploadError, setUploadError] = useState('');
-  const [uploadName, setUploadName] = useState('');
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [analysisStage, setAnalysisStage] = useState('Preparing your CV');
-  const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!creatingChat) return;
@@ -79,55 +67,6 @@ export default function ChatPage() {
     }, 0);
     return () => window.clearTimeout(timer);
   }, [loadCVs]);
-
-  const chooseFile = (selected: File | null) => {
-    setUploadError('');
-    setUploadedFile(null);
-    if (!selected) {
-      setUploadName('');
-      return;
-    }
-    const ext = selected.name.toLowerCase().split('.').pop();
-    if (!ACCEPTED.includes(selected.type) && !['pdf', 'doc', 'docx'].includes(ext ?? '')) {
-      setUploadError('Choose a PDF, DOC, or DOCX file.');
-      setUploadName('');
-      return;
-    }
-    if (selected.size > MAX_FILE_SIZE) {
-      setUploadError('CV files must be 10 MB or smaller.');
-      setUploadName('');
-      return;
-    }
-    setUploadedFile(selected);
-    setUploadName(selected.name.replace(/\.[^.]+$/, '').slice(0, 120));
-  };
-
-  async function uploadInlineCv(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!uploadedFile) {
-      setUploadError('Select a PDF or Word document first.');
-      return;
-    }
-    setUploadingCv(true);
-    setUploadError('');
-    try {
-      const cvName = uploadName.trim() || uploadedFile.name.replace(/\.[^.]+$/, '').slice(0, 120);
-      const createdCv = await cvService.upload(uploadedFile, cvName);
-      setCvs((items) => [createdCv, ...items.filter((cv) => cv.id !== createdCv.id)]);
-      setSelectedCvId(createdCv.id);
-      toast.success('Your CV was uploaded and saved in the CV library.');
-      setUploadedFile(null);
-      setUploadName('');
-      if (fileInput.current) fileInput.current.value = '';
-      await loadCVs();
-    } catch (reason: unknown) {
-      const responseMessage = (reason as { response?: { data?: { message?: string } } })?.response
-        ?.data?.message;
-      setUploadError(responseMessage ?? 'Could not upload this CV. Please try again.');
-    } finally {
-      setUploadingCv(false);
-    }
-  }
 
   async function createNewChat() {
     if (creatingChat) return;
@@ -244,14 +183,6 @@ export default function ChatPage() {
           onJobDescriptionChange={setJobDescription}
           onCreateChat={() => void createNewChat()}
           creatingChat={creatingChat}
-          uploadName={uploadName}
-          onUploadNameChange={setUploadName}
-          uploadedFile={uploadedFile}
-          onChooseFile={chooseFile}
-          fileInputRef={fileInput}
-          onUpload={uploadInlineCv}
-          uploadingCv={uploadingCv}
-          uploadError={uploadError}
           analysisProgress={analysisProgress}
           analysisStage={analysisStage}
         />
