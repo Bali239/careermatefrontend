@@ -3,13 +3,11 @@
 import type { RefObject } from 'react';
 import { Card, Empty } from 'antd';
 import type { ChatSession } from '@/app/dashboard/models';
-import ChatMessage from '@/components/chat/ChatMessage';
 import ChatAnalysisCard from '@/components/chat/ChatAnalysisCard';
 import ChatEmpty from '@/components/chat/ChatEmpty';
 
 type ChatConversationPanelProps = {
   activeChat: ChatSession | null;
-  messagesViewport: RefObject<HTMLDivElement | null>;
   onRewrite?: () => void;
   onDownloadGenerated?: (versionId: string, format: 'docx' | 'pdf') => void;
   rewriting?: boolean;
@@ -21,7 +19,6 @@ type ChatConversationPanelProps = {
 
 export default function ChatConversationPanel({
   activeChat,
-  messagesViewport,
   onRewrite,
   onDownloadGenerated,
   rewriting,
@@ -44,7 +41,7 @@ export default function ChatConversationPanel({
           </div>
         </div>
 
-        <div ref={messagesViewport} className="min-h-0 flex-1 overflow-y-auto px-6 py-6 pb-[360px]">
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
           {!activeChat ? (
             <ChatEmpty />
           ) : (
@@ -61,22 +58,14 @@ export default function ChatConversationPanel({
                 maxRewrites={maxRewrites}
               />
 
-              {activeChat.messages.length === 0 ? (
+              {rewriteCount >= (maxRewrites ?? 3) && (
                 <Card className="mx-auto max-w-3xl rounded-[24px] border-[#ececf4] bg-white">
                   <Empty
                     description={
-                      rewriteCount >= (maxRewrites ?? 3)
-                        ? 'You have reached the maximum of 3 rewritten CV versions. Download your preferred version below.'
-                        : 'Use Rewrite my CV to generate a tailored version of your CV. You can create up to 3 rewritten versions.'
+                      'You have reached the maximum of 3 rewritten CV versions. Download your preferred version below.'
                     }
                   />
                 </Card>
-              ) : (
-                <div className="mx-auto max-w-4xl space-y-4">
-                  {activeChat.messages.map((message) => (
-                    <ChatMessage key={message.id} message={message} />
-                  ))}
-                </div>
               )}
             </div>
           )}

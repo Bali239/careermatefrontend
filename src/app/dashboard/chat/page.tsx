@@ -42,7 +42,6 @@ export default function ChatPage() {
   const [uploadName, setUploadName] = useState('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
-  const messagesViewport = useRef<HTMLDivElement>(null);
 
   const activeChat = useMemo(
     () => chatList.find((chat) => chat.id === activeChatId) ?? null,
@@ -71,11 +70,6 @@ export default function ChatPage() {
   useEffect(() => {
     setEditorHtml(activeChat?.draftHtml || activeChat?.analysis?.editableHtml || '');
   }, [activeChat?.id, activeChat?.draftHtml, activeChat?.analysis?.editableHtml]);
-
-  useEffect(() => {
-    const viewport = messagesViewport.current;
-    if (viewport) viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
-  }, [activeChat?.id, activeChat?.messages.length]);
 
   const chooseFile = (selected: File | null) => {
     setUploadError('');
@@ -255,7 +249,6 @@ export default function ChatPage() {
         <>
           <ChatConversationPanel
             activeChat={activeChat}
-            messagesViewport={messagesViewport}
             onRewrite={() => void rewriteCurrentCv()}
             onDownloadGenerated={(versionId, format) =>
               void downloadGeneratedVersion(versionId, format)
