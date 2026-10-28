@@ -27,7 +27,13 @@ export type ChatSession = {
     strengths: string[];
     gaps: string[];
     missingSkills: string[];
-    recommendations: string[];
+    recommendations: Array<{
+      issue: string;
+      whyItMatters?: string;
+      suggestedImprovement?: string;
+      relevantSection?: string;
+      requiresAdditionalInfo?: boolean;
+    }>;
     keywords: string[];
     tailoredSummary: string;
     editableHtml: string;
