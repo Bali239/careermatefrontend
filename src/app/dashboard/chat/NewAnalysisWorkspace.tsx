@@ -89,37 +89,6 @@ export default function NewAnalysisWorkspace({
 
   return (
     <div className="relative h-full min-h-0 overflow-y-auto bg-[#f7f7fb] px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
-      {creatingChat && (
-        <div
-          className="absolute inset-0 z-30 flex items-center justify-center bg-[#f7f7fb]/85 px-5 backdrop-blur-md"
-          role="status"
-          aria-live="polite"
-        >
-          <div className="w-full max-w-md rounded-3xl border border-white/90 bg-white px-6 py-8 text-center shadow-[0_24px_70px_rgba(39,35,75,0.16)] sm:px-9">
-            <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-[#f0edff] text-[#7666d6]">
-              <RobotOutlined className="animate-pulse text-2xl" />
-            </div>
-            <p className="mt-5 text-xs font-semibold uppercase tracking-[0.16em] text-[#7666d6]">
-              Gemini analysis in progress
-            </p>
-            <h2 className="mt-2 text-xl font-semibold text-[#25243a]">Building your career match</h2>
-            <p className="mt-2 text-sm leading-6 text-[#777487]">
-              {analysisStage}. This may take a little while for a detailed result.
-            </p>
-            <div className="mt-7 flex items-center justify-between text-xs font-semibold text-[#6f6b83]">
-              <span>{analysisStage}</span>
-              <span className="text-[#7666d6]">{analysisProgress}%</span>
-            </div>
-            <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#eeecf7]">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-[#9b8df1] via-[#7666d6] to-[#5541c7] transition-[width] duration-500 ease-out"
-                style={{ width: `${analysisProgress}%` }}
-              />
-            </div>
-            <p className="mt-5 text-[11px] text-[#aaa7b8]">Please keep this window open.</p>
-          </div>
-        </div>
-      )}
       <div className="mx-auto w-full max-w-290 pb-8">
         <header className="mx-auto max-w-2xl text-center">
           <div className="mx-auto mb-4 grid size-11 place-items-center rounded-2xl border border-[#e4dff8] bg-white text-[#7565d7] shadow-sm">
@@ -328,17 +297,34 @@ export default function NewAnalysisWorkspace({
         </div>
 
         <div className="mx-auto mt-6 max-w-2xl text-center">
-          <Button
-            type="primary"
-            size="large"
-            icon={<ThunderboltOutlined />}
-            loading={creatingChat}
-            disabled={!canScan}
-            onClick={onCreateChat}
-            className="h-12! w-full! rounded-xl! border-0! bg-[#7666d6]! text-sm! font-semibold! shadow-[0_6px_16px_rgba(118,102,214,0.2)]! hover:bg-[#6656c7]! disabled:bg-[#c9c4dd]!"
-          >
-            Scan My CV
-          </Button>
+          {creatingChat ? (
+            <div className="rounded-xl border border-[#ded9f4] bg-white px-5 py-3.5 text-left shadow-[0_6px_16px_rgba(118,102,214,0.08)]" role="status" aria-live="polite">
+              <div className="flex items-center justify-between gap-4 text-xs font-semibold text-[#6f6b83]">
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="size-2 animate-pulse rounded-full bg-[#7666d6]" />
+                  <span className="truncate">{analysisStage}</span>
+                </span>
+                <span className="shrink-0 text-[#7666d6]">{analysisProgress}%</span>
+              </div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#eeecf7]">
+                <div
+                  className="h-full rounded-full bg-linear-to-r from-[#9b8df1] via-[#7666d6] to-[#5541c7] transition-[width] duration-500 ease-out"
+                  style={{ width: `${analysisProgress}%` }}
+                />
+              </div>
+            </div>
+          ) : (
+            <Button
+              type="primary"
+              size="large"
+              icon={<ThunderboltOutlined />}
+              disabled={!canScan}
+              onClick={onCreateChat}
+              className="h-12! w-full! rounded-xl! border-0! bg-[#7666d6]! text-sm! font-semibold! shadow-[0_6px_16px_rgba(118,102,214,0.2)]! hover:bg-[#6656c7]! disabled:bg-[#c9c4dd]!"
+            >
+              Scan My CV
+            </Button>
+          )}
           <p className="mt-3 text-xs leading-5 text-[#898696] sm:text-sm">
             Get insights into your skills match, missing qualifications, and opportunities to improve your CV.
           </p>
