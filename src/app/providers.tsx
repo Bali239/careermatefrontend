@@ -21,6 +21,22 @@ export default function Providers({ children }: PropsWithChildren) {
               colorPrimary: '#6958d6',
               borderRadius: 12,
               fontFamily: 'Arial, Helvetica, sans-serif',
+              controlHeight: 44,
+              colorBgContainer: '#ffffff',
+              colorBorder: '#e7e5ef',
+            },
+            components: {
+              Modal: {
+                borderRadiusLG: 20,
+                contentBg: '#ffffff',
+                boxShadow: '0 24px 80px rgba(31, 27, 61, 0.18)',
+              },
+              Card: {
+                borderRadiusLG: 18,
+              },
+              Button: {
+                controlHeight: 44,
+              },
             },
           }}
         >

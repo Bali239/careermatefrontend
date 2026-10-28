@@ -25,6 +25,60 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid rgba(105, 88, 214, 0.32);
+  outline-offset: 2px;
+}
+
+.ant-modal-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.ant-modal {
+  top: 0;
+  width: min(900px, 100%) !important;
+  max-width: 100%;
+  margin: 0;
+}
+
+.ant-modal-content {
+  overflow: hidden;
+}
+
+.ant-modal-body {
+  max-height: min(70dvh, 620px);
+  overflow-y: auto;
+}
+
+@media (max-width: 640px) {
+  .ant-modal-wrap {
+    align-items: flex-end;
+    padding: 10px;
+  }
+
+  .ant-modal {
+    width: 100% !important;
+  }
+
+  .ant-modal-content {
+    border-radius: 20px !important;
+  }
+}
+
 ::selection {
   background: #dcd6ff;
   color: #2d206c;
@@ -61,6 +115,14 @@ body {
   animation-delay: 260ms;
 }
 
+.modal-backdrop {
+  animation: modal-fade 180ms ease-out both;
+}
+
+.modal-panel {
+  animation: modal-pop 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 @keyframes float-slow {
   0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
   50% { transform: translate3d(0, -10px, 0) rotate(1deg); }
@@ -71,9 +133,19 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes modal-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-pop {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .float-slow, .float-delay, .reveal-up { animation: none; }
+  .float-slow, .float-delay, .reveal-up, .modal-backdrop, .modal-panel { animation: none; }
 }
 
 a, button, [role="link"], [role="button"] {

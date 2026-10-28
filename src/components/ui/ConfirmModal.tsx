@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useId } from 'react';
+import { createPortal } from 'react-dom';
 
 type ConfirmModalProps = {
   open: boolean;
@@ -23,19 +24,26 @@ export default function ConfirmModal({
   onCancel,
   onConfirm,
 }: ConfirmModalProps) {
+  const modalId = useId().replace(/:/g, '');
+
   useEffect(() => {
     if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && !loading) onCancel();
     };
     window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
   }, [open, loading, onCancel]);
 
-  if (!open) return null;
-  return (
+  if (!open || typeof document === 'undefined') return null;
+  return createPortal(
     <div
-      className="fixed inset-0 z-[100] grid place-items-center bg-slate-950/55 p-4"
+      className="modal-backdrop fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-[3px] sm:p-6"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && !loading) onCancel();
       }}
@@ -43,23 +51,23 @@ export default function ConfirmModal({
       <section
         role="alertdialog"
         aria-modal="true"
-        aria-labelledby="confirm-modal-title"
-        aria-describedby="confirm-modal-description"
-        className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
+        aria-labelledby={`${modalId}-title`}
+        aria-describedby={`${modalId}-description`}
+        className="modal-panel max-h-[min(90dvh,560px)] w-full max-w-md overflow-y-auto rounded-2xl border border-white/80 bg-white p-5 shadow-[0_24px_80px_rgba(15,23,42,0.24)] sm:rounded-3xl sm:p-7"
       >
-        <h2 id="confirm-modal-title" className="text-lg font-semibold text-slate-900">
+        <h2 id={`${modalId}-title`} className="text-lg font-semibold text-slate-900">
           {title}
         </h2>
-        <p id="confirm-modal-description" className="mt-2 text-sm leading-6 text-slate-600">
+        <p id={`${modalId}-description`} className="mt-2 text-sm leading-6 text-slate-600">
           {description}
         </p>
-        <div className="mt-6 flex justify-end gap-3">
+        <div className="mt-6 grid grid-cols-2 gap-3">
           <button
             type="button"
             autoFocus
             disabled={loading}
             onClick={onCancel}
-            className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            className="min-h-11 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50"
           >
             Cancel
           </button>
@@ -67,12 +75,13 @@ export default function ConfirmModal({
             type="button"
             disabled={loading}
             onClick={() => void onConfirm()}
-            className={`rounded-xl px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60 ${destructive ? 'bg-rose-600 hover:bg-rose-700' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+            className={`min-h-11 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition disabled:opacity-60 ${destructive ? 'bg-rose-600 hover:bg-rose-700' : 'bg-indigo-600 hover:bg-indigo-700'}`}
           >
             {loading ? 'Please wait…' : confirmLabel}
           </button>
         </div>
       </section>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -40,9 +40,10 @@ export default function CvSelectionModal({
     <Modal
       title="Choose or upload your CV"
       open={open}
+      centered
       onCancel={onClose}
       footer={null}
-      width={900}
+      width="min(900px, calc(100vw - 32px))"
     >
       <div className="grid gap-4 md:grid-cols-[1.15fr_0.85fr]">
         <div>
