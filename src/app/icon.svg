@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title>CareerMate</title>
+  <defs>
+    <linearGradient id="background" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#917FF3"/>
+      <stop offset="1" stop-color="#5B47CA"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="17" y1="14" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity=".98"/>
+      <stop offset="1" stop-color="#E7E2FF" stop-opacity=".92"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="18" fill="url(#background)"/>
+  <path d="M32 12.5 35.9 26l13.6 1.1-10.4 8.7 3.2 13.3L32 41.8l-10.3 7.3 3.2-13.3-10.4-8.7L28.1 26 32 12.5Z" fill="url(#shine)"/>
+  <circle cx="48.5" cy="14.5" r="3" fill="#C8BEFF" opacity=".9"/>
+</svg>
