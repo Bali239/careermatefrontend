@@ -15,6 +15,8 @@ type ChatConversationPanelProps = {
   rewriting?: boolean;
   downloadingVersionId?: string;
   downloadingFormat?: 'docx' | 'pdf';
+  rewriteCount?: number;
+  maxRewrites?: number;
 };
 
 export default function ChatConversationPanel({
@@ -25,6 +27,8 @@ export default function ChatConversationPanel({
   rewriting,
   downloadingVersionId,
   downloadingFormat,
+  rewriteCount = 0,
+  maxRewrites = 3,
 }: ChatConversationPanelProps) {
   return (
     <div className="flex h-full min-h-0 flex-col bg-white">
@@ -53,11 +57,19 @@ export default function ChatConversationPanel({
                 rewriting={rewriting}
                 downloadingVersionId={downloadingVersionId}
                 downloadingFormat={downloadingFormat}
+                rewriteCount={rewriteCount}
+                maxRewrites={maxRewrites}
               />
 
               {activeChat.messages.length === 0 ? (
                 <Card className="mx-auto max-w-3xl rounded-[24px] border-[#ececf4] bg-white">
-                  <Empty description="Start the conversation by asking for a rewrite, keyword match, or a stronger summary." />
+                  <Empty
+                    description={
+                      rewriteCount >= (maxRewrites ?? 3)
+                        ? 'You have reached the maximum of 3 rewritten CV versions. Download your preferred version below.'
+                        : 'Use Rewrite my CV to generate a tailored version of your CV. You can create up to 3 rewritten versions.'
+                    }
+                  />
                 </Card>
               ) : (
                 <div className="mx-auto max-w-4xl space-y-4">

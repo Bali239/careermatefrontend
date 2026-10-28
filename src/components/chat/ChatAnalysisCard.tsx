@@ -11,6 +11,8 @@ type ChatAnalysisCardProps = {
   rewriting?: boolean;
   downloadingVersionId?: string;
   downloadingFormat?: 'docx' | 'pdf';
+  rewriteCount?: number;
+  maxRewrites?: number;
 };
 
 export default function ChatAnalysisCard({
@@ -21,12 +23,17 @@ export default function ChatAnalysisCard({
   rewriting = false,
   downloadingVersionId,
   downloadingFormat,
+  rewriteCount = 0,
+  maxRewrites = 3,
 }: ChatAnalysisCardProps) {
   if (!analysis) return null;
 
   const latestVersion = [...(generatedCvVersions ?? [])].sort(
     (a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime()
   )[0];
+
+  const rewritesRemaining = Math.max(0, (maxRewrites ?? 3) - (rewriteCount ?? 0));
+  const rewriteDisabled = rewritesRemaining === 0;
 
   return (
     <Card className="rounded-[24px] border-[#ececf4] bg-[#f9f9ff]">
@@ -74,9 +81,14 @@ export default function ChatAnalysisCard({
               type="primary"
               onClick={onRewrite}
               loading={rewriting}
+              disabled={rewriteDisabled}
               className="rounded-full bg-[#4f46e5]"
             >
-              {rewriting ? 'Generating...' : 'Rewrite my CV'}
+              {rewriting
+                ? 'Generating...'
+                : rewriteDisabled
+                  ? `Rewrite limit reached (${maxRewrites})`
+                  : `Rewrite my CV (${rewritesRemaining} left)`}
             </Button>
 
             {latestVersion && latestVersion.status === 'completed' && onDownloadGenerated && (
@@ -84,7 +96,9 @@ export default function ChatAnalysisCard({
                 <Button
                   size="small"
                   variant="outlined"
-                  loading={downloadingVersionId === latestVersion.id && downloadingFormat === 'docx'}
+                  loading={
+                    downloadingVersionId === latestVersion.id && downloadingFormat === 'docx'
+                  }
                   onClick={() => onDownloadGenerated(latestVersion.id, 'docx')}
                 >
                   Download DOCX

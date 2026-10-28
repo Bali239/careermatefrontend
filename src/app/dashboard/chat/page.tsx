@@ -11,7 +11,6 @@ import { cvService } from '@/lib/services/cv.service';
 import { useChatNavigation } from '../ChatNavigationContext';
 import type { CV, ChatSession } from '../models';
 import NewAnalysisWorkspace from './NewAnalysisWorkspace';
-import ChatComposer from './ChatComposer';
 import ChatConversationPanel from './ChatConversationPanel';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -37,9 +36,7 @@ export default function ChatPage() {
   const [jobDescription, setJobDescription] = useState('');
   const [loadingCVs, setLoadingCVs] = useState(true);
   const [creatingChat, setCreatingChat] = useState(false);
-  const [sendingMessage, setSendingMessage] = useState(false);
   const { chatList, setChatList, activeChatId, selectChat } = useChatNavigation();
-  const [messageDraft, setMessageDraft] = useState('');
   const [editorHtml, setEditorHtml] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
   const [uploadingCv, setUploadingCv] = useState(false);
@@ -53,7 +50,6 @@ export default function ChatPage() {
     () => chatList.find((chat) => chat.id === activeChatId) ?? null,
     [activeChatId, chatList]
   );
-  const canChat = !activeChat || !activeChat.isEditing;
 
   const loadCVs = useCallback(async () => {
     setLoadingCVs(true);
@@ -153,7 +149,6 @@ export default function ChatPage() {
       });
       setChatList((items) => [created, ...items]);
       selectChat(created.id);
-      setMessageDraft('');
       toast.success('Your CV and job description are being analyzed.');
     } catch (reason: unknown) {
       const responseMessage = (reason as { response?: { data?: { message?: string } } })?.response
@@ -161,24 +156,6 @@ export default function ChatPage() {
       toast.error(responseMessage ?? 'Could not analyze this CV for the job description.');
     } finally {
       setCreatingChat(false);
-    }
-  }
-
-  async function sendMessage() {
-    if (!activeChat || !messageDraft.trim() || !canChat) return;
-    const text = messageDraft.trim();
-    setMessageDraft('');
-    setSendingMessage(true);
-    try {
-      const updated = await chatService.sendMessage(activeChat.id, text);
-      setChatList((items) => items.map((chat) => (chat.id === activeChat.id ? updated : chat)));
-      selectChat(updated.id);
-    } catch (reason: unknown) {
-      const responseMessage = (reason as { response?: { data?: { message?: string } } })?.response
-        ?.data?.message;
-      toast.error(responseMessage ?? 'Could not send your message.');
-    } finally {
-      setSendingMessage(false);
     }
   }
 
@@ -240,10 +217,13 @@ export default function ChatPage() {
     setDownloadingFormat(format);
     try {
       const version = activeChat.generatedCvVersions?.find((entry) => entry.id === versionId);
-      const baseName = (activeChat.title || 'tailored-cv').replace(/[^a-z0-9_-]+/gi, '-').toLowerCase();
-      const downloadName = format === 'pdf'
-        ? version?.pdfFileName || `${baseName}.pdf`
-        : version?.docxFileName || `${baseName}.docx`;
+      const baseName = (activeChat.title || 'tailored-cv')
+        .replace(/[^a-z0-9_-]+/gi, '-')
+        .toLowerCase();
+      const downloadName =
+        format === 'pdf'
+          ? version?.pdfFileName || `${baseName}.pdf`
+          : version?.docxFileName || `${baseName}.docx`;
       const content = editorHtml || activeChat.draftHtml || activeChat.analysis?.editableHtml || '';
 
       if (format === 'pdf') {
@@ -355,27 +335,15 @@ export default function ChatPage() {
             activeChat={activeChat}
             messagesViewport={messagesViewport}
             onRewrite={() => void rewriteCurrentCv()}
-            onDownloadGenerated={(versionId, format) => void downloadGeneratedVersion(versionId, format)}
+            onDownloadGenerated={(versionId, format) =>
+              void downloadGeneratedVersion(versionId, format)
+            }
             rewriting={rewritingChat}
             downloadingVersionId={downloadingVersionId}
             downloadingFormat={downloadingFormat ?? undefined}
+            rewriteCount={activeChat.generatedCvVersions?.length ?? 0}
+            maxRewrites={3}
           />
-          <div className="fixed inset-x-0 bottom-0 z-20 px-4 py-3 md:left-64">
-            <div className="mx-auto max-w-4xl rounded-[20px] border border-[#e8eaf4] bg-[#f9faff] p-3">
-            <ChatComposer
-              mode="message"
-              value={messageDraft}
-              onChange={setMessageDraft}
-              selectedCvLabel={cvs.find((cv) => cv.id === activeChat.cvId)?.name ?? 'Current CV'}
-              disabled={!canChat}
-              submitting={sendingMessage}
-              onSubmit={() => void sendMessage()}
-              onEditDraft={() =>
-                setEditorHtml(activeChat.draftHtml || activeChat.analysis?.editableHtml || '')
-              }
-            />
-            </div>
-          </div>
         </>
       ) : (
         <NewAnalysisWorkspace
