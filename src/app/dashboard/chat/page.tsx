@@ -1,6 +1,5 @@
 'use client';
 
-import { Editor } from '@tinymce/tinymce-react';
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Document, Packer, Paragraph, TextRun } from 'docx';
 import { jsPDF } from 'jspdf';
@@ -38,7 +37,6 @@ export default function ChatPage() {
   const [creatingChat, setCreatingChat] = useState(false);
   const { chatList, setChatList, activeChatId, selectChat } = useChatNavigation();
   const [editorHtml, setEditorHtml] = useState('');
-  const [savingEdit, setSavingEdit] = useState(false);
   const [uploadingCv, setUploadingCv] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [uploadName, setUploadName] = useState('');
@@ -159,37 +157,6 @@ export default function ChatPage() {
     }
   }
 
-  async function saveDraft() {
-    if (!activeChat) return;
-    setSavingEdit(true);
-    try {
-      const updated = await chatService.editDraft(activeChat.id, editorHtml || '', true);
-      setChatList((items) => items.map((chat) => (chat.id === activeChat.id ? updated : chat)));
-      selectChat(updated.id);
-      toast.success('Draft saved.');
-    } catch (reason: unknown) {
-      const responseMessage = (reason as { response?: { data?: { message?: string } } })?.response
-        ?.data?.message;
-      toast.error(responseMessage ?? 'Could not save this draft.');
-    } finally {
-      setSavingEdit(false);
-    }
-  }
-
-  async function exitEditMode() {
-    if (!activeChat) return;
-    try {
-      const updated = await chatService.exitEditMode(activeChat.id);
-      setChatList((items) => items.map((chat) => (chat.id === activeChat.id ? updated : chat)));
-      selectChat(updated.id);
-      toast.success('Chat unlocked. You can continue talking.');
-    } catch (reason: unknown) {
-      const responseMessage = (reason as { response?: { data?: { message?: string } } })?.response
-        ?.data?.message;
-      toast.error(responseMessage ?? 'Could not exit edit mode.');
-    }
-  }
-
   const [rewritingChat, setRewritingChat] = useState(false);
   const [downloadingFormat, setDownloadingFormat] = useState<'docx' | 'pdf' | null>(null);
   const [downloadingVersionId, setDownloadingVersionId] = useState('');
@@ -280,51 +247,6 @@ export default function ChatPage() {
       setDownloadingVersionId('');
       setDownloadingFormat(null);
     }
-  }
-
-  async function exportToPdf() {
-    if (!activeChat) return;
-    const target = document.getElementById('cv-editor-export');
-    if (!target) return;
-    const canvas = await html2canvas(target, {
-      scale: 2,
-      backgroundColor: '#ffffff',
-      useCORS: true,
-    });
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const imgData = canvas.toDataURL('image/png');
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    const imageRatio = canvas.width / canvas.height;
-    const renderedWidth = pageWidth;
-    const renderedHeight = renderedWidth / imageRatio;
-    const yOffset = Math.max((pageHeight - renderedHeight) / 2, 0);
-    pdf.addImage(imgData, 'PNG', 0, yOffset, renderedWidth, renderedHeight);
-    pdf.save(`${(activeChat.title || 'cv-draft').replace(/\s+/g, '-').toLowerCase()}.pdf`);
-  }
-
-  async function exportToDocx() {
-    if (!activeChat) return;
-    const content = editorHtml || activeChat.analysis?.editableHtml || '';
-    const normalized = toPlainText(content);
-    const paragraphs = normalized
-      ? normalized
-          .split(/\n+/)
-          .map((line) => line.trim())
-          .filter(Boolean)
-          .map((line) => new Paragraph({ children: [new TextRun({ text: line, break: 1 })] }))
-      : [new Paragraph('No content to export.')];
-
-    const doc = new Document({
-      sections: [{ children: paragraphs }],
-    });
-    const blob = await Packer.toBlob(doc);
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${(activeChat.title || 'cv-draft').replace(/\s+/g, '-').toLowerCase()}.docx`;
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
   }
 
   return (
