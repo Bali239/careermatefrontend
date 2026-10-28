@@ -19,6 +19,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [chatList, setChatList] = useState<ChatSession[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const [chatToDelete, setChatToDelete] = useState<ChatSession | null>(null);
+  const [deletingChat, setDeletingChat] = useState(false);
   const routeChatId = pathname.match(/^\/dashboard\/chat\/([^/]+)$/)?.[1] ?? null;
 
   const selectChat = (id: string | null) => {
@@ -60,11 +62,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const handleDeleteChat = async (id: string) => {
     try {
+      setDeletingChat(true);
       await api.delete(`/chat/${id}`);
       setChatList((prev) => prev.filter((c) => c.id !== id));
+      setChatToDelete(null);
       if (routeChatId === id) selectChat(null);
     } catch {
       toast.error('Could not delete chat.');
+    } finally {
+      setDeletingChat(false);
     }
   };
 
@@ -119,10 +125,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           onNewChat={handleNewChat}
           onSelectChat={(id) => selectChat(id)}
           onRename={handleRenameChat}
-          onDelete={(chat) => handleDeleteChat(chat.id)}
-          chatToDelete={null}
-          setChatToDelete={() => {}}
-          deletingChat={false}
+          onDelete={(chat) => setChatToDelete(chat)}
+          chatToDelete={chatToDelete}
+          setChatToDelete={setChatToDelete}
+          deletingChat={deletingChat}
           handleDeleteChat={handleDeleteChat}
           setLogoutOpen={setLogoutOpen}
         />
