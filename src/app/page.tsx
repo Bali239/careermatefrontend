@@ -26,14 +26,16 @@ const features = [
 
 export default function Home() {
   return (
-    <main className="mx-auto max-w-[1440px] overflow-hidden px-[22px] sm:px-[5%] xl:px-[7.2%]">
-      <header className="flex h-[72px] items-center justify-between border-b border-[#f1f0f6] sm:h-[88px]">
+    <main className="relative mx-auto max-w-[1440px] overflow-hidden px-[22px] sm:px-[5%] xl:px-[7.2%]">
+      <div className="public-grid pointer-events-none absolute inset-x-0 top-0 h-[700px] opacity-80" />
+      <div className="pointer-events-none absolute -right-48 top-[-220px] size-[560px] rounded-full bg-[#dcd5ff]/55 blur-3xl" />
+      <header className="relative z-10 flex h-[76px] items-center justify-between border-b border-[#ebe8f4]/80 sm:h-[92px]">
         <a
           className="inline-flex items-center gap-2.5 text-xl font-extrabold tracking-[-1px] text-[#1e2440]"
           href="#home"
           aria-label="AI Career Assistant home"
         >
-          <span className="grid size-[34px] place-items-center rounded-[11px] bg-gradient-to-br from-[#8d7cf0] to-[#6352ce] text-white">
+          <span className="grid size-[35px] place-items-center rounded-[12px] bg-gradient-to-br from-[#917ff3] to-[#5b47ca] text-white shadow-[0_8px_20px_#6958d640]">
             <LandingIcon name="star" />
           </span>
           <span>
@@ -41,13 +43,13 @@ export default function Home() {
           </span>
         </a>
         <nav
-          className="hidden items-center gap-5 text-[13px] font-semibold text-[#676d85] sm:flex lg:gap-[38px]"
+          className="hidden items-center gap-5 text-[12px] font-semibold text-[#77758e] sm:flex lg:gap-[38px]"
           aria-label="Main navigation"
         >
-          <a className="hover:text-[#6958d6]" href="#features">
+          <a className="transition hover:text-[#6958d6]" href="#features">
             How it works
           </a>
-          <a className="hover:text-[#6958d6]" href="#about">
+          <a className="transition hover:text-[#6958d6]" href="#about">
             About
           </a>
         </nav>
@@ -57,25 +59,25 @@ export default function Home() {
       </header>
 
       <section
-        className="grid items-center gap-6 py-[57px] sm:gap-5 sm:py-[55px] lg:min-h-[590px] lg:grid-cols-[1.02fr_.98fr] lg:gap-12 lg:py-[67px]"
+        className="relative z-[1] grid items-center gap-6 py-[64px] sm:gap-5 sm:py-[72px] lg:min-h-[630px] lg:grid-cols-[1.02fr_.98fr] lg:gap-12 lg:py-[86px]"
         id="home"
       >
-        <div className="relative z-[1] max-w-[570px]">
+        <div className="relative z-[1] max-w-[590px]">
           <div className="inline-flex items-center gap-[9px] text-[10px] font-extrabold tracking-[1.5px] text-[#6958d6]">
             <span className="size-[7px] rounded-full bg-[#8d7cf0] shadow-[0_0_0_4px_#f1efff]" />{' '}
             YOUR NEXT CHAPTER STARTS HERE
           </div>
-          <h1 className="my-5 text-[clamp(43px,11vw,62px)] font-bold leading-[1.07] tracking-[-2.5px] text-[#1e2440] sm:text-[clamp(44px,5.5vw,69px)] sm:tracking-[-3.5px]">
+          <h1 className="reveal-up my-5 max-w-[650px] text-[clamp(43px,11vw,62px)] font-bold leading-[1.04] tracking-[-2.8px] text-[#18162e] sm:text-[clamp(44px,5.5vw,69px)] sm:tracking-[-4px]">
             Make your next career move{' '}
-            <span className="block text-[#6958d6]">with confidence.</span>
+            <span className="block bg-gradient-to-r from-[#806ceb] via-[#6958d6] to-[#4f3abf] bg-clip-text text-transparent">with confidence.</span>
           </h1>
-          <p className="max-w-[450px] text-[15px] leading-[1.85] text-[#727994]">
+          <p className="reveal-up reveal-delay-1 max-w-[470px] text-[15px] leading-[1.85] text-[#77758e]">
             A thoughtful assistant for understanding your experience, exploring opportunities, and
             finding a direction that fits you.
           </p>
-          <div className="mt-[30px] flex flex-wrap items-center gap-x-5 gap-y-3">
+          <div className="reveal-up reveal-delay-2 mt-[30px] flex flex-wrap items-center gap-x-5 gap-y-3">
             <Link
-              className="inline-flex items-center gap-3 rounded-[10px] bg-[#6958d6] px-5 py-3.5 text-xs font-bold text-white shadow-[0_9px_20px_#6958d633] transition hover:-translate-y-0.5 hover:shadow-[0_12px_24px_#6958d644]"
+              className="inline-flex items-center gap-3 rounded-[12px] bg-gradient-to-r from-[#7967e9] to-[#5d49ce] px-5 py-3.5 text-xs font-bold text-white shadow-[0_12px_24px_#6958d644] transition hover:-translate-y-1 hover:shadow-[0_16px_30px_#6958d655]"
               href="/auth/signup"
             >
               Get started <LandingIcon name="arrow" />
@@ -106,13 +108,13 @@ export default function Home() {
         </div>
 
         <div
-          className="relative isolate grid min-h-[370px] place-items-center sm:min-h-[430px]"
+          className="reveal-up reveal-delay-2 relative isolate grid min-h-[370px] place-items-center sm:min-h-[430px]"
           aria-label="Career progress illustration"
         >
           <div className="absolute -z-20 size-[350px] rounded-full bg-[radial-gradient(circle,#f3efff_0,#faf9ff_55%,transparent_70%)] sm:size-[410px]" />
           <div className="absolute -z-10 h-[190px] w-[390px] rotate-[-20deg] rounded-[50%] border border-[#e7e1ff] sm:h-[215px] sm:w-[490px]" />
           <div className="absolute -z-10 h-[260px] w-[360px] rotate-[48deg] rounded-[50%] border border-[#e7e1ff] sm:h-[300px] sm:w-[430px]" />
-          <div className="relative z-[1] w-[min(360px,78vw)] rounded-[20px] border border-[#f0eef8] bg-white px-6 py-6 shadow-[0_26px_70px_#3b2c8516,0_4px_14px_#3b2c850b]">
+          <div className="float-slow relative z-[1] w-[min(360px,78vw)] rounded-[22px] border border-white/80 bg-white/90 px-6 py-6 shadow-[0_30px_80px_#3b2c8520,0_4px_14px_#3b2c850b] backdrop-blur-xl">
             <div className="flex items-center gap-[9px] text-[8px] font-extrabold tracking-[1.1px] text-[#9b9daf]">
               <span className="grid size-[27px] place-items-center rounded-[9px] bg-[#f0edff] text-[#6958d6]">
                 <LandingIcon name="star" />
@@ -146,7 +148,7 @@ export default function Home() {
               <LandingIcon name="arrow" />
             </div>
           </div>
-          <div className="absolute right-0 top-[27px] z-[2] flex items-center gap-2.5 rounded-[13px] border border-[#f1eff8] bg-white px-3.5 py-3 shadow-[0_13px_35px_#382b7818] sm:right-[-8px] sm:top-[50px]">
+          <div className="float-delay absolute right-0 top-[27px] z-[2] flex items-center gap-2.5 rounded-[14px] border border-white/80 bg-white/90 px-3.5 py-3 shadow-[0_16px_40px_#382b7820] backdrop-blur-xl sm:right-[-8px] sm:top-[50px]">
             <span className="grid size-[31px] place-items-center rounded-[10px] bg-[#f0edff] text-[#6958d6]">
               <LandingIcon name="bulb" />
             </span>
@@ -155,7 +157,7 @@ export default function Home() {
               <small className="mt-1 block text-[8px] text-[#9a9eb0]">One step at a time</small>
             </span>
           </div>
-          <div className="absolute bottom-[25px] left-0 z-[2] flex items-center gap-2.5 rounded-[13px] border border-[#f1eff8] bg-white px-3.5 py-3 shadow-[0_13px_35px_#382b7818] sm:bottom-[42px] sm:left-[-5px]">
+          <div className="float-delay absolute bottom-[25px] left-0 z-[2] flex items-center gap-2.5 rounded-[14px] border border-white/80 bg-white/90 px-3.5 py-3 shadow-[0_16px_40px_#382b7820] backdrop-blur-xl sm:bottom-[42px] sm:left-[-5px]">
             <span className="grid size-[31px] place-items-center rounded-[10px] bg-[#e6f7ef] text-sm font-extrabold text-[#40a57a]">
               ✓
             </span>
@@ -171,7 +173,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="border-t border-[#f1f0f6] py-[52px] sm:py-16 lg:pb-[77px]" id="features">
+      <section className="relative z-[1] border-t border-[#ebe8f4] py-[58px] sm:py-20 lg:pb-[88px]" id="features">
         <div className="text-center">
           <span className="text-[9px] font-extrabold tracking-[1.5px] text-[#6958d6]">
             A LITTLE HELP GOES A LONG WAY
@@ -186,7 +188,7 @@ export default function Home() {
         <div className="mt-[29px] grid grid-cols-1 gap-[17px] sm:mt-[39px] lg:grid-cols-3">
           {features.map((feature) => (
             <article
-              className="group relative min-h-[170px] rounded-[15px] border border-[#ececf4] bg-white p-[23px] transition hover:-translate-y-[3px] hover:shadow-[0_14px_30px_#28214e0d] lg:min-h-[190px]"
+              className="group relative min-h-[170px] rounded-[18px] border border-[#eceaf4] bg-white/80 p-[23px] shadow-[0_8px_26px_#28214e05] backdrop-blur-sm transition hover:-translate-y-1 hover:border-[#dcd5fa] hover:bg-white hover:shadow-[0_18px_38px_#28214e12] lg:min-h-[190px]"
               key={feature.title}
             >
               <span
