@@ -35,18 +35,15 @@ export default function AuthPage({
         role="alert"
       >
         <section className="w-full max-w-[450px] rounded-[20px] border border-[#eeecf6] bg-white px-6 py-[30px] shadow-[0_24px_80px_#3024600d] sm:px-[42px] sm:py-[38px]">
-          <div className="mb-[25px] text-center">
-            <h1 className="my-3 text-[27px] font-bold tracking-[-1px]">You’re already logged in</h1>
+          <div className="text-center">
+            <span className="mx-auto mb-5 grid size-11 place-items-center rounded-full bg-[#f0edff] text-[#6958d6]">
+              <span className="size-4 animate-spin rounded-full border-2 border-[#cfc7fa] border-t-[#6958d6]" />
+            </span>
+            <h1 className="my-3 text-[25px] font-bold tracking-[-1px] text-[#1e1b35]">You’re logged in</h1>
             <p className="m-0 text-xs leading-[1.7] text-[#727994]">
-              Taking you to your dashboard…
+              Loading your dashboard, please wait…
             </p>
           </div>
-          <Link
-            className="mt-5 flex min-h-11 items-center justify-center rounded-[9px] bg-[#6958d6] px-4 text-xs font-bold text-white hover:bg-[#5949c5]"
-            href="/dashboard"
-          >
-            Go to dashboard
-          </Link>
         </section>
       </main>
     );
