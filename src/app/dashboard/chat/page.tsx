@@ -141,7 +141,7 @@ export default function ChatPage() {
       });
       setChatList((items) => [created, ...items.filter((chat) => chat.id !== created.id)]);
       selectChat(created.id);
-      toast.success('Your CV and job description are being analyzed.');
+      toast.success('Analysis complete — your Gemini-powered CV match is ready.');
     } catch (reason: unknown) {
       const responseMessage = (reason as { response?: { data?: { message?: string } } })?.response
         ?.data?.message;

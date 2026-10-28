@@ -24,12 +24,12 @@ export type ChatSession = {
   analysis: {
     summary: string;
     atsScore: number;
-    overallScore?: number;
+    overallScore?: number | null;
     strengths: string[];
     gaps: string[];
     missingSkills: string[];
     recommendations: Array<{
-      issue: string;
+      issue?: string;
       whyItMatters?: string;
       suggestedImprovement?: string;
       relevantSection?: string;

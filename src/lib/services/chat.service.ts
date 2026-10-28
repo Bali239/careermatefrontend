@@ -13,12 +13,16 @@ export const chatService = {
   },
 
   create: async (payload: { cvId: string; jobDescription: string; title?: string }) => {
-    const response = await api.post<{ data: ChatSession }>('/chat', payload);
+    const response = await api.post<{ data: ChatSession }>('/chat', payload, {
+      timeout: 600_000,
+    });
     return response.data.data;
   },
 
   analyze: async (id: string) => {
-    const response = await api.post<{ data: ChatSession }>(`/chat/${id}/analyze`);
+    const response = await api.post<{ data: ChatSession }>(`/chat/${id}/analyze`, undefined, {
+      timeout: 600_000,
+    });
     return response.data.data;
   },
 

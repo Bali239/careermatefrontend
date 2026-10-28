@@ -198,9 +198,11 @@ export default function ChatAnalysisCard({
   const rewritesRemaining = Math.max(0, (maxRewrites ?? 3) - (rewriteCount ?? 0));
   const rewriteDisabled = rewritesRemaining === 0;
 
-  const atsScore = clamp(analysis.atsScore ?? 0, 0, 100);
+  const atsScore = typeof analysis.atsScore === 'number' ? clamp(analysis.atsScore, 0, 100) : null;
   const overallScore =
-    analysis.overallScore !== undefined ? clamp(analysis.overallScore, 0, 100) : null;
+    typeof analysis.overallScore === 'number' && analysis.overallJobMatch
+      ? clamp(analysis.overallScore, 0, 100)
+      : null;
   const hasRealScore = overallScore !== null;
   const overallMatch = (analysis.overallJobMatch ?? {}) as {
     score?: number;
@@ -213,7 +215,10 @@ export default function ChatAnalysisCard({
     strongestAreas?: string[];
     biggestGaps?: string[];
   };
-  const skillsComparison = analysis.skillsComparison ?? [];
+  const strengths = Array.isArray(analysis.strengths) ? analysis.strengths : [];
+  const gaps = Array.isArray(analysis.gaps) ? analysis.gaps : [];
+  const missingSkills = Array.isArray(analysis.missingSkills) ? analysis.missingSkills : [];
+  const skillsComparison = Array.isArray(analysis.skillsComparison) ? analysis.skillsComparison : [];
   const jdBreakdown = (analysis.jobDescriptionBreakdown ?? {}) as {
     requiredSkills?: string[];
     preferredSkills?: string[];
@@ -249,9 +254,10 @@ export default function ChatAnalysisCard({
     return skillsComparison;
   }, [skillFilter, skillsComparison, cvSkills]);
 
-  const topRecs = analysis.recommendations.slice(0, 3);
-  const restRecs = analysis.recommendations.slice(3);
-  const visibleRecs = showAllRecs ? analysis.recommendations : topRecs;
+  const recommendations = (Array.isArray(analysis.recommendations) ? analysis.recommendations : [])
+    .filter((recommendation) => recommendation.issue?.trim());
+  const topRecs = recommendations.slice(0, 3);
+  const visibleRecs = showAllRecs ? recommendations : topRecs;
 
   const handleCopy = (text: string, index: number) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -282,7 +288,7 @@ export default function ChatAnalysisCard({
               CV Job Match Analysis
             </div>
             <div className="mt-1.5 text-lg font-semibold text-[#111827] leading-snug line-clamp-2">
-              {analysis.summary || 'Analysis complete'}
+              {analysis.summary || 'No summary was returned for this CV analysis.'}
             </div>
             <div className="mt-1 text-xs text-[#6B7280]">{'Analysis complete'}</div>
           </div>
@@ -298,7 +304,7 @@ export default function ChatAnalysisCard({
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
           {metricCard(
             'Job Match',
-            overallMatch.score !== undefined ? overallMatch.score : undefined,
+            overallMatch.score,
             'Overall fit',
             true
           )}
@@ -317,8 +323,8 @@ export default function ChatAnalysisCard({
               <h3 className="text-sm font-semibold text-[#166534]">Key Strengths</h3>
             </div>
             <div className="space-y-2">
-              {analysis.strengths.length > 0 ? (
-                analysis.strengths.map((s, i) => (
+              {strengths.length > 0 ? (
+                strengths.map((s, i) => (
                   <div
                     key={`str-${i}`}
                     className="text-sm text-[#166534] leading-relaxed flex items-start gap-2"
@@ -340,8 +346,8 @@ export default function ChatAnalysisCard({
               <h3 className="text-sm font-semibold text-[#991b1b]">Skills to Address</h3>
             </div>
             <div className="flex flex-wrap gap-2">
-              {analysis.missingSkills.length > 0 ? (
-                analysis.missingSkills.map((skill, i) => (
+              {missingSkills.length > 0 ? (
+                missingSkills.map((skill, i) => (
                   <Fragment key={`missing-${i}`}>
                     {skillTag(skill, 'not demonstrated')}
                   </Fragment>
@@ -359,8 +365,8 @@ export default function ChatAnalysisCard({
               <h3 className="text-sm font-semibold text-[#92400e]">Areas for Improvement</h3>
             </div>
             <div className="space-y-2">
-              {analysis.gaps.length > 0 ? (
-                analysis.gaps.map((g, i) => (
+              {gaps.length > 0 ? (
+                gaps.map((g, i) => (
                   <div
                     key={`gap-${i}`}
                     className="text-sm text-[#92400e] leading-relaxed flex items-start gap-2"
@@ -377,19 +383,19 @@ export default function ChatAnalysisCard({
         </div>
 
         {/* ── Recommendations (top 3 + expand) ── */}
-        {analysis.recommendations.length > 0 ? (
+        {recommendations.length > 0 ? (
           <div className="mb-6">
             <h3 className="text-sm font-semibold text-[#111827] mb-3">Priority Recommendations</h3>
             <div className="space-y-3">
               {visibleRecs.map((rec, i) => (
                 <div
-                  key={i}
+                  key={`${rec.issue}-${i}`}
                   className="rounded-xl border border-[#e5e7eb] bg-white p-4 hover:border-[#d1d5db] transition-colors"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-semibold text-[#111827]">
-                        {rec.issue || `Recommendation ${i + 1}`}
+                        {rec.issue}
                       </div>
                       {rec.whyItMatters && (
                         <div className="mt-1.5 text-sm text-[#6B7280] leading-relaxed">
@@ -433,7 +439,7 @@ export default function ChatAnalysisCard({
                 </div>
               ))}
             </div>
-            {analysis.recommendations.length > 3 && (
+            {recommendations.length > 3 && (
               <button
                 type="button"
                 onClick={() => setShowAllRecs(!showAllRecs)}
@@ -441,7 +447,7 @@ export default function ChatAnalysisCard({
               >
                 {showAllRecs
                   ? 'Show less'
-                  : `Show ${analysis.recommendations.length - 3} more recommendations`}
+                  : `Show ${recommendations.length - 3} more recommendations`}
                 <DownOutlined
                   className={`text-xs transition-transform ${showAllRecs ? 'rotate-180' : ''}`}
                 />
@@ -506,7 +512,7 @@ export default function ChatAnalysisCard({
                     <div className="space-y-2 max-h-64 overflow-y-auto">
                       {filteredSkills.map((item, i) => (
                         <div
-                          key={i}
+                  key={`${item.requirement}-${i}`}
                           className="flex items-start gap-3 p-3 rounded-lg border border-[#f3f4f6] bg-[#fafafa] hover:bg-white transition-colors"
                         >
                           <span className="shrink-0 mt-0.5">{statusIcon(item.status)}</span>
@@ -522,6 +528,15 @@ export default function ChatAnalysisCard({
                                 {item.importance}
                               </span>
                             </div>
+                            {item.evidence?.length ? (
+                              <div className="mt-1 text-xs text-[#4b5563] leading-relaxed">
+                                Evidence from CV: {item.evidence.join(' · ')}
+                              </div>
+                            ) : (
+                              <div className="mt-1 text-xs text-[#9ca3af] italic">
+                                No direct CV evidence was returned for this requirement.
+                              </div>
+                            )}
                             {item.explanation && (
                               <div className="mt-1 text-xs text-[#6B7280] leading-relaxed">
                                 {item.explanation}
@@ -550,7 +565,9 @@ export default function ChatAnalysisCard({
                         Required Skills (from JD)
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        {jdBreakdown.requiredSkills.map((s) => skillTag(s))}
+                        {jdBreakdown.requiredSkills.map((s, i) => (
+                          <Fragment key={`required-skill-${s}-${i}`}>{skillTag(s)}</Fragment>
+                        ))}
                       </div>
                     </div>
                   )}
@@ -560,7 +577,9 @@ export default function ChatAnalysisCard({
                         Preferred Skills (from JD)
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        {jdBreakdown.preferredSkills.map((s) => skillTag(s))}
+                        {jdBreakdown.preferredSkills.map((s, i) => (
+                          <Fragment key={`preferred-skill-${s}-${i}`}>{skillTag(s)}</Fragment>
+                        ))}
                       </div>
                     </div>
                   )}
@@ -581,7 +600,7 @@ export default function ChatAnalysisCard({
                             ? 'border-[#fef3c7] bg-[#fffbeb]'
                             : 'border-[#fee2e2] bg-[#fef2f2]';
                       return (
-                        <div key={insight.title} className={`rounded-xl border p-4 ${color}`}>
+                        <div key={`${insight.title}-${i}`} className={`rounded-xl border p-4 ${color}`}>
                           <div className="flex items-center justify-between mb-3">
                             <h4 className="text-sm font-bold text-[#111827]">{insight.title}</h4>
                             <Tag
@@ -597,15 +616,29 @@ export default function ChatAnalysisCard({
                               {insight.relevance}
                             </Tag>
                           </div>
+                          {insight.evidence.length > 0 ? (
+                            <div className="mb-2">
+                              <div className="text-[10px] font-bold uppercase text-[#6B7280] mb-1">
+                                CV Evidence
+                              </div>
+                              <div className="text-sm text-[#374151] leading-relaxed">
+                                {insight.evidence.join(' · ')}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="mb-2 text-xs text-[#9ca3af] italic">
+                              No supporting CV evidence was returned for this insight.
+                            </div>
+                          )}
                           {insight.skillsDemonstrated.length > 0 && (
                             <div className="mb-2">
                               <div className="text-[10px] font-bold uppercase text-[#6B7280] mb-1">
                                 Skills Shown
                               </div>
                               <div className="flex flex-wrap gap-1">
-                                {insight.skillsDemonstrated.map((s) => (
+                                {insight.skillsDemonstrated.map((s, i) => (
                                   <Tag
-                                    key={s}
+                                    key={`${s}-${i}`}
                                     color="blue"
                                     className="!text-[10px] !px-1.5 !py-0.5"
                                   >
@@ -653,10 +686,10 @@ export default function ChatAnalysisCard({
               children: (
                 <div className="space-y-4">
                   {scoreBreakdown.length > 0 ? (
-                    scoreBreakdown.map((item) => {
+                    scoreBreakdown.map((item, i) => {
                       const pct = clamp(item.score, 0, 100);
                       return (
-                        <div key={item.label} className="flex flex-col gap-1.5">
+                        <div key={`${item.label}-${i}`} className="flex flex-col gap-1.5">
                           <div className="flex items-center justify-between text-xs">
                             <span className="font-medium text-[#374151]">{item.label}</span>
                             <span className="font-bold text-[#111827]">{Math.round(pct)}/100</span>
@@ -718,8 +751,8 @@ export default function ChatAnalysisCard({
                           Technical Document Checks
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          {atsReadiness.technicalDocumentChecks.map((c) => (
-                            <Tag key={c} color="green" className="!text-[10px]">
+                          {atsReadiness.technicalDocumentChecks.map((c, i) => (
+                            <Tag key={`${c}-${i}`} color="green" className="!text-[10px]">
                               {c}
                             </Tag>
                           ))}
@@ -732,8 +765,8 @@ export default function ChatAnalysisCard({
                         AI Recommendations
                       </div>
                       <ul className="space-y-1 text-sm text-[#374151] list-disc pl-5">
-                        {atsReadiness.aiRecommendations.map((c) => (
-                          <li key={c}>{c}</li>
+                        {atsReadiness.aiRecommendations.map((c, i) => (
+                          <li key={`${c}-${i}`}>{c}</li>
                         ))}
                       </ul>
                     </div>
