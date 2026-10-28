@@ -29,6 +29,8 @@ type NewAnalysisWorkspaceProps = {
   onUpload: FormEventHandler<HTMLFormElement>;
   uploadingCv: boolean;
   uploadError: string;
+  analysisProgress: number;
+  analysisStage: string;
 };
 
 const ACCEPTED_FILE_TYPES =
@@ -77,6 +79,8 @@ export default function NewAnalysisWorkspace({
   onUpload,
   uploadingCv,
   uploadError,
+  analysisProgress,
+  analysisStage,
 }: NewAnalysisWorkspaceProps) {
   const selectedCv = cvs.find((cv) => cv.id === selectedCvId) ?? null;
   const descriptionLength = jobDescription.trim().length;
@@ -84,7 +88,38 @@ export default function NewAnalysisWorkspace({
   const canScan = Boolean(selectedCv) && descriptionValid && !creatingChat;
 
   return (
-    <div className="h-full min-h-0 overflow-y-auto bg-[#f7f7fb] px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+    <div className="relative h-full min-h-0 overflow-y-auto bg-[#f7f7fb] px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+      {creatingChat && (
+        <div
+          className="absolute inset-0 z-30 flex items-center justify-center bg-[#f7f7fb]/85 px-5 backdrop-blur-md"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="w-full max-w-md rounded-3xl border border-white/90 bg-white px-6 py-8 text-center shadow-[0_24px_70px_rgba(39,35,75,0.16)] sm:px-9">
+            <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-[#f0edff] text-[#7666d6]">
+              <RobotOutlined className="animate-pulse text-2xl" />
+            </div>
+            <p className="mt-5 text-xs font-semibold uppercase tracking-[0.16em] text-[#7666d6]">
+              Gemini analysis in progress
+            </p>
+            <h2 className="mt-2 text-xl font-semibold text-[#25243a]">Building your career match</h2>
+            <p className="mt-2 text-sm leading-6 text-[#777487]">
+              {analysisStage}. This may take a little while for a detailed result.
+            </p>
+            <div className="mt-7 flex items-center justify-between text-xs font-semibold text-[#6f6b83]">
+              <span>{analysisStage}</span>
+              <span className="text-[#7666d6]">{analysisProgress}%</span>
+            </div>
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#eeecf7]">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-[#9b8df1] via-[#7666d6] to-[#5541c7] transition-[width] duration-500 ease-out"
+                style={{ width: `${analysisProgress}%` }}
+              />
+            </div>
+            <p className="mt-5 text-[11px] text-[#aaa7b8]">Please keep this window open.</p>
+          </div>
+        </div>
+      )}
       <div className="mx-auto w-full max-w-290 pb-8">
         <header className="mx-auto max-w-2xl text-center">
           <div className="mx-auto mb-4 grid size-11 place-items-center rounded-2xl border border-[#e4dff8] bg-white text-[#7565d7] shadow-sm">

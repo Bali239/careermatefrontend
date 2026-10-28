@@ -27,7 +27,34 @@ export default function ChatPage() {
   const [uploadError, setUploadError] = useState('');
   const [uploadName, setUploadName] = useState('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [analysisProgress, setAnalysisProgress] = useState(0);
+  const [analysisStage, setAnalysisStage] = useState('Preparing your CV');
   const fileInput = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!creatingChat) return;
+    const startedAt = Date.now();
+    const timer = window.setInterval(() => {
+      const elapsed = Date.now() - startedAt;
+      if (elapsed < 1500) {
+        setAnalysisProgress(12);
+        setAnalysisStage('Preparing your CV');
+      } else if (elapsed < 5000) {
+        setAnalysisProgress(30);
+        setAnalysisStage('Reading your experience');
+      } else if (elapsed < 11000) {
+        setAnalysisProgress(55);
+        setAnalysisStage('Matching skills to the role');
+      } else if (elapsed < 18000) {
+        setAnalysisProgress(74);
+        setAnalysisStage('Evaluating fit and ATS readiness');
+      } else {
+        setAnalysisProgress((current) => Math.min(92, current + 1));
+        setAnalysisStage('Finishing your analysis');
+      }
+    }, 500);
+    return () => window.clearInterval(timer);
+  }, [creatingChat]);
 
   const activeChat = useMemo(
     () => chatList.find((chat) => chat.id === activeChatId) ?? null,
@@ -115,6 +142,8 @@ export default function ChatPage() {
     }
 
     setCreatingChat(true);
+    setAnalysisProgress(8);
+    setAnalysisStage('Preparing your CV');
     try {
       const created = await chatService.create({
         cvId: selectedCvId,
@@ -122,9 +151,11 @@ export default function ChatPage() {
         title: `Role fit: ${description.slice(0, 48)}`,
       });
       setChatList((items) => [created, ...items.filter((chat) => chat.id !== created.id)]);
+      setAnalysisProgress(100);
       selectChat(created.id);
       toast.success('Analysis complete — your Gemini-powered CV match is ready.');
     } catch (reason: unknown) {
+      setAnalysisProgress(0);
       const responseMessage = (reason as { response?: { data?: { message?: string } } })?.response
         ?.data?.message;
       toast.error(responseMessage ?? 'Could not analyze this CV for the job description.');
@@ -221,6 +252,8 @@ export default function ChatPage() {
           onUpload={uploadInlineCv}
           uploadingCv={uploadingCv}
           uploadError={uploadError}
+          analysisProgress={analysisProgress}
+          analysisStage={analysisStage}
         />
       )}
     </>
