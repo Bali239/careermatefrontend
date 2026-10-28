@@ -68,15 +68,32 @@ export default function ChatPage() {
     return () => window.clearTimeout(timer);
   }, [loadCVs]);
 
+  useEffect(() => {
+    const hasPendingExtraction = cvs.some(
+      (cv) => cv.extractionStatus === 'pending' || cv.extractionStatus === 'processing'
+    );
+    if (!hasPendingExtraction) return;
+    const timer = window.setInterval(() => {
+      void loadCVs();
+    }, 2500);
+    return () => window.clearInterval(timer);
+  }, [cvs, loadCVs]);
+
   async function createNewChat() {
     if (creatingChat) return;
     if (!selectedCvId) {
-      toast.error('Select a CV before analyzing it.');
+      toast.info('Select a CV from your library before starting the analysis.');
+      return;
+    }
+    const selectedCv = cvs.find((cv) => cv.id === selectedCvId);
+    if (selectedCv?.extractionStatus !== 'completed') {
+      toast.info('Your CV is still being prepared. Please wait until extraction is complete.');
+      void loadCVs();
       return;
     }
     const description = jobDescription.trim();
     if (description.length < 20 || description.length > 8000) {
-      toast.error('Add a fuller job description before analyzing.');
+      toast.info('Please add at least 20 characters to the job description before scanning.');
       return;
     }
 

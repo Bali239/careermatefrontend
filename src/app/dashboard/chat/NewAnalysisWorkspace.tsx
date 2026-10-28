@@ -64,7 +64,9 @@ export default function NewAnalysisWorkspace({
   const selectedCv = cvs.find((cv) => cv.id === selectedCvId) ?? null;
   const descriptionLength = jobDescription.trim().length;
   const descriptionValid = descriptionLength >= 20 && descriptionLength <= 8000;
-  const canScan = Boolean(selectedCv) && descriptionValid && !creatingChat;
+  const cvReady = selectedCv?.extractionStatus === 'completed';
+  const cvPreparing = selectedCv?.extractionStatus === 'pending' || selectedCv?.extractionStatus === 'processing';
+  const canScan = Boolean(selectedCv) && cvReady && descriptionValid && !creatingChat;
 
   return (
     <div className="relative h-full min-h-0 overflow-y-auto bg-[#f7f7fb] px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
@@ -153,7 +155,9 @@ export default function NewAnalysisWorkspace({
                     {selectedCv.fileName} | {getExtension(selectedCv.fileName)} | {formatFileSize(selectedCv.size)}
                   </p>
                 </div>
-                <Tag color="purple" className="mr-0!">Selected</Tag>
+                <Tag color={cvReady ? 'purple' : cvPreparing ? 'gold' : 'red'} className="mr-0!">
+                  {cvReady ? 'Ready' : cvPreparing ? 'Preparing' : 'Needs attention'}
+                </Tag>
                 <Button
                   type="text"
                   size="small"
@@ -174,6 +178,17 @@ export default function NewAnalysisWorkspace({
                   <p className="mt-0.5 text-xs text-[#898696]">Choose one from your CV library.</p>
                 </div>
               </div>
+            )}
+
+            {selectedCv && cvPreparing && (
+              <p role="status" className="mb-4 rounded-xl bg-amber-50 px-3 py-2.5 text-xs leading-5 text-amber-800">
+                We’re still reading your CV. Please wait for extraction to finish before scanning it.
+              </p>
+            )}
+            {selectedCv?.extractionStatus === 'failed' && (
+              <p role="alert" className="mb-4 rounded-xl bg-rose-50 px-3 py-2.5 text-xs leading-5 text-rose-700">
+                We couldn’t read this CV. Please upload it again from your CV library and select the new copy.
+              </p>
             )}
 
             <div className="mb-3 flex items-center justify-between gap-3">
@@ -205,6 +220,11 @@ export default function NewAnalysisWorkspace({
                         <span className="mt-0.5 block truncate text-xs text-[#8a8796]">
                           {cv.fileName} | {formatFileSize(cv.size)}
                         </span>
+                        {cv.extractionStatus !== 'completed' && (
+                          <span className={`mt-1 block text-[11px] font-medium ${cv.extractionStatus === 'failed' ? 'text-rose-600' : 'text-amber-700'}`}>
+                            {cv.extractionStatus === 'failed' ? 'Could not read this CV' : 'Reading CV details…'}
+                          </span>
+                        )}
                       </span>
                       {isSelected && <CheckCircleFilled className="shrink-0 text-[#7667d2]" />}
                     </button>
@@ -255,7 +275,15 @@ export default function NewAnalysisWorkspace({
             </Button>
           )}
           <p className="mt-3 text-xs leading-5 text-[#898696] sm:text-sm">
-            Get insights into your skills match, missing qualifications, and opportunities to improve your CV.
+            {!selectedCv
+              ? 'Select a CV from your library to begin.'
+              : cvPreparing
+                ? 'Your CV is being prepared. The scan will be available when this finishes.'
+                : selectedCv.extractionStatus === 'failed'
+                  ? 'This CV could not be read. Upload a new copy from your CV library.'
+                  : !descriptionValid
+                    ? 'Add a job description with at least 20 characters to continue.'
+                    : 'Get insights into your skills match, missing qualifications, and opportunities to improve your CV.'}
           </p>
         </div>
       </div>
