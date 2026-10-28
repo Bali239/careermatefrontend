@@ -24,6 +24,7 @@ export type ChatSession = {
   analysis: {
     summary: string;
     atsScore: number;
+    overallScore?: number;
     strengths: string[];
     gaps: string[];
     missingSkills: string[];

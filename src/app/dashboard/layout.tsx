@@ -44,7 +44,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       .then((response) => {
         if (cancelled) return;
         const chats = response.data.data;
-        setChatList(chats);
+        const uniqueChats = chats.filter(
+          (chat, index, allChats) => allChats.findIndex((item) => item.id === chat.id) === index
+        );
+        setChatList(uniqueChats);
       })
       .catch(() => {
         if (!cancelled) toast.error('Could not load your chat history.');

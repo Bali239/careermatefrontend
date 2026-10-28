@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { Fragment, useState, useMemo } from 'react';
 import { Button, Card, Empty, Tabs, Tag, Tooltip } from 'antd';
 import {
   CheckCircleFilled,
@@ -32,7 +32,33 @@ function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
-function ratingCircle(value: number, max: number = 10) {
+function ratingCircle(value: number | null, max: number = 10) {
+  if (value === null) {
+    return (
+      <div className="relative flex items-center justify-center w-28 h-28">
+        <svg
+          className="w-28 h-28 -rotate-90"
+          viewBox="0 0 100 100"
+          aria-label="Job match rating not assessed"
+        >
+          <circle cx="50" cy="50" r="42" stroke="#e5e7eb" strokeWidth="8" fill="none" />
+          <circle
+            cx="50"
+            cy="50"
+            r="42"
+            stroke="#9ca3af"
+            strokeWidth="4"
+            strokeDasharray="4,4"
+            fill="none"
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+          <span className="text-3xl font-bold text-[#9ca3af] leading-none">—</span>
+          <span className="text-[10px] font-semibold text-[#6B7280] leading-none mt-1">/ 10</span>
+        </div>
+      </div>
+    );
+  }
   const pct = clamp((value / max) * 100, 0, 100);
   const strokeDash = 283;
   const offset = strokeDash - (pct / 100) * strokeDash;
@@ -119,7 +145,6 @@ function skillTag(
   const cfg = config[status ?? 'unclear'] ?? config['unclear'];
   return (
     <Tag
-      key={skill}
       color={cfg.color as any}
       className="!text-xs !font-medium !px-2.5 !py-1 !rounded-full"
     >
@@ -174,6 +199,9 @@ export default function ChatAnalysisCard({
   const rewriteDisabled = rewritesRemaining === 0;
 
   const atsScore = clamp(analysis.atsScore ?? 0, 0, 100);
+  const overallScore =
+    analysis.overallScore !== undefined ? clamp(analysis.overallScore, 0, 100) : null;
+  const hasRealScore = overallScore !== null;
   const overallMatch = (analysis.overallJobMatch ?? {}) as {
     score?: number;
     technicalSkills?: number;
@@ -233,14 +261,15 @@ export default function ChatAnalysisCard({
   };
 
   /* ── interpretation ── */
-  const interpretation =
-    atsScore >= 80
+  const interpretation = hasRealScore
+    ? overallScore! >= 80
       ? 'Strong match — your CV aligns well with this role. Minor refinements can strengthen it further.'
-      : atsScore >= 60
+      : overallScore! >= 60
         ? 'Moderate match — several skills align, but key gaps should be addressed to improve your chances.'
-        : atsScore >= 40
+        : overallScore! >= 40
           ? 'Partial match — significant gaps exist. Tailoring your CV to highlight relevant experience is recommended.'
-          : 'Low match — major alignment gaps. Consider whether this role fits your current profile or if significant updates are needed.';
+          : 'Low match — major alignment gaps. Consider whether this role fits your current profile or if significant updates are needed.'
+    : 'Overall score not assessed — Gemini did not return skill/experience/keyword/evidence sub-metrics for this analysis.';
 
   return (
     <Card className="rounded-2xl border border-[#e5e7eb] bg-white shadow-sm overflow-hidden">
@@ -258,7 +287,7 @@ export default function ChatAnalysisCard({
             <div className="mt-1 text-xs text-[#6B7280]">{'Analysis complete'}</div>
           </div>
           <div className="flex flex-col items-center gap-1 shrink-0">
-            {ratingCircle(atsScore)}
+            {ratingCircle(overallScore)}
             <div className="text-xs font-medium text-[#6B7280]">{interpretation.slice(0, 60)}…</div>
           </div>
         </div>
@@ -289,9 +318,9 @@ export default function ChatAnalysisCard({
             </div>
             <div className="space-y-2">
               {analysis.strengths.length > 0 ? (
-                analysis.strengths.map((s) => (
+                analysis.strengths.map((s, i) => (
                   <div
-                    key={s}
+                    key={`str-${i}`}
                     className="text-sm text-[#166534] leading-relaxed flex items-start gap-2"
                   >
                     <span className="text-[#16a34a] shrink-0">•</span>
@@ -312,7 +341,11 @@ export default function ChatAnalysisCard({
             </div>
             <div className="flex flex-wrap gap-2">
               {analysis.missingSkills.length > 0 ? (
-                analysis.missingSkills.map((skill) => skillTag(skill, 'not demonstrated'))
+                analysis.missingSkills.map((skill, i) => (
+                  <Fragment key={`missing-${i}`}>
+                    {skillTag(skill, 'not demonstrated')}
+                  </Fragment>
+                ))
               ) : (
                 <div className="text-sm text-[#6B7280]">No major missing skills detected.</div>
               )}
@@ -327,9 +360,9 @@ export default function ChatAnalysisCard({
             </div>
             <div className="space-y-2">
               {analysis.gaps.length > 0 ? (
-                analysis.gaps.map((g) => (
+                analysis.gaps.map((g, i) => (
                   <div
-                    key={g}
+                    key={`gap-${i}`}
                     className="text-sm text-[#92400e] leading-relaxed flex items-start gap-2"
                   >
                     <span className="text-[#d97706] shrink-0">•</span>
@@ -344,7 +377,7 @@ export default function ChatAnalysisCard({
         </div>
 
         {/* ── Recommendations (top 3 + expand) ── */}
-        {analysis.recommendations.length > 0 && (
+        {analysis.recommendations.length > 0 ? (
           <div className="mb-6">
             <h3 className="text-sm font-semibold text-[#111827] mb-3">Priority Recommendations</h3>
             <div className="space-y-3">
@@ -414,6 +447,13 @@ export default function ChatAnalysisCard({
                 />
               </button>
             )}
+          </div>
+        ) : (
+          <div className="mb-6 rounded-xl border border-[#e5e7eb] bg-[#fafafa] p-5 text-center">
+            <div className="text-sm text-[#6B7280]">
+              No recommendations available. The analysis did not generate specific improvement
+              suggestions.
+            </div>
           </div>
         )}
 
@@ -498,7 +538,8 @@ export default function ChatAnalysisCard({
                     </div>
                   ) : (
                     <div className="text-sm text-[#6B7280] py-8 text-center">
-                      No skills data available for this filter.
+                      No skills comparison data available. The analysis could not extract skill
+                      matches from your CV for this filter.
                     </div>
                   )}
 
@@ -532,7 +573,7 @@ export default function ChatAnalysisCard({
               children: (
                 <div className="space-y-4">
                   {experienceInsights.length > 0 ? (
-                    experienceInsights.map((insight) => {
+                    experienceInsights.map((insight, i) => {
                       const color =
                         insight.relevance === 'high'
                           ? 'border-[#dcfce7] bg-[#f0fdf4]'
@@ -599,7 +640,8 @@ export default function ChatAnalysisCard({
                     })
                   ) : (
                     <div className="text-sm text-[#6B7280] py-8 text-center">
-                      No experience insights available.
+                      No experience insights available. Upload a more detailed CV to get
+                      experience-based recommendations.
                     </div>
                   )}
                 </div>
@@ -633,7 +675,7 @@ export default function ChatAnalysisCard({
                     })
                   ) : (
                     <div className="text-sm text-[#6B7280] py-8 text-center">
-                      No score breakdown available.
+                      No score breakdown available. The analysis did not provide detailed scoring.
                     </div>
                   )}
                 </div>

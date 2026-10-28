@@ -139,7 +139,7 @@ export default function ChatPage() {
         jobDescription: description,
         title: `Role fit: ${description.slice(0, 48)}`,
       });
-      setChatList((items) => [created, ...items]);
+      setChatList((items) => [created, ...items.filter((chat) => chat.id !== created.id)]);
       selectChat(created.id);
       toast.success('Your CV and job description are being analyzed.');
     } catch (reason: unknown) {
