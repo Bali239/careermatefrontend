@@ -1,9 +1,6 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Document, Packer, Paragraph, TextRun } from 'docx';
-import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
 import { toast } from 'sonner';
 import { chatService } from '@/lib/services/chat.service';
 import { cvService } from '@/lib/services/cv.service';
@@ -19,16 +16,6 @@ const ACCEPTED = [
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ];
 
-function stripHtml(html: string) {
-  const temp = document.createElement('div');
-  temp.innerHTML = html;
-  return (temp.textContent ?? temp.innerText ?? '').replace(/\s+/g, ' ').trim();
-}
-
-function toPlainText(html: string) {
-  return stripHtml(html || '');
-}
-
 export default function ChatPage() {
   const [cvs, setCvs] = useState<CV[]>([]);
   const [selectedCvId, setSelectedCvId] = useState('');
@@ -36,7 +23,6 @@ export default function ChatPage() {
   const [loadingCVs, setLoadingCVs] = useState(true);
   const [creatingChat, setCreatingChat] = useState(false);
   const { chatList, setChatList, activeChatId, selectChat } = useChatNavigation();
-  const [editorHtml, setEditorHtml] = useState('');
   const [uploadingCv, setUploadingCv] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [uploadName, setUploadName] = useState('');
@@ -66,10 +52,6 @@ export default function ChatPage() {
     }, 0);
     return () => window.clearTimeout(timer);
   }, [loadCVs]);
-
-  useEffect(() => {
-    setEditorHtml(activeChat?.draftHtml || activeChat?.analysis?.editableHtml || '');
-  }, [activeChat?.id, activeChat?.draftHtml, activeChat?.analysis?.editableHtml]);
 
   const chooseFile = (selected: File | null) => {
     setUploadError('');
@@ -185,52 +167,13 @@ export default function ChatPage() {
         format === 'pdf'
           ? version?.pdfFileName || `${baseName}.pdf`
           : version?.docxFileName || `${baseName}.docx`;
-      const content = editorHtml || activeChat.draftHtml || activeChat.analysis?.editableHtml || '';
-
-      if (format === 'pdf') {
-        const printable = document.createElement('div');
-        printable.innerHTML = content;
-        Object.assign(printable.style, {
-          position: 'fixed',
-          left: '-10000px',
-          top: '0',
-          width: '794px',
-          padding: '36px',
-          background: '#ffffff',
-          color: '#111827',
-          fontFamily: 'Arial, Helvetica, sans-serif',
-          lineHeight: '1.5',
-        });
-        document.body.appendChild(printable);
-        const canvas = await html2canvas(printable, { scale: 2, backgroundColor: '#ffffff' });
-        printable.remove();
-
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        const pageHeight = pdf.internal.pageSize.getHeight();
-        const renderedHeight = (canvas.height * pageWidth) / canvas.width;
-        const pageCount = Math.ceil(renderedHeight / pageHeight);
-        const image = canvas.toDataURL('image/png');
-        for (let page = 0; page < pageCount; page += 1) {
-          if (page > 0) pdf.addPage();
-          pdf.addImage(image, 'PNG', 0, -page * pageHeight, pageWidth, renderedHeight);
-        }
-        pdf.save(downloadName);
-      } else {
-        const plainText = toPlainText(content);
-        const paragraphs = plainText
-          .split(/\n+/)
-          .map((line) => line.trim())
-          .filter(Boolean)
-          .map((line) => new Paragraph({ children: [new TextRun({ text: line })] }));
-        const blob = await Packer.toBlob(new Document({ sections: [{ children: paragraphs }] }));
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = downloadName;
-        link.click();
-        setTimeout(() => URL.revokeObjectURL(url), 5000);
-      }
+      const blob = await chatService.download(activeChat.id, versionId, format);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = downloadName;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
 
       toast.success(`Downloaded the ${format.toUpperCase()} version.`);
     } catch (reason: unknown) {
